@@ -15,8 +15,8 @@ local FlySpeed = 100
 local BodyGyro, BodyVelocity, FlyConn
 
 -- Misc vars
-local InvisFlingEnabled = false
-local InvisFlingConnection
+local SpinFlingEnabled = false
+local SpinFlingConnection
 
 -- Parent aman
 local ScreenGui = Instance.new("ScreenGui")
@@ -283,51 +283,31 @@ UIListMisc.FillDirection = Enum.FillDirection.Vertical
 UIListMisc.HorizontalAlignment = Enum.HorizontalAlignment.Center
 UIListMisc.VerticalAlignment = Enum.VerticalAlignment.Top
 
--- InvisFling toggle
-CreateToggleButton(MiscPage,"InvisFling",
-    function() return InvisFlingEnabled end,
+-- SpinFling toggle
+CreateToggleButton(MiscPage,"SpinFling",
+    function() return SpinFlingEnabled end,
     function(state)
-        InvisFlingEnabled = state
+        SpinFlingEnabled = state
         local HRP = Character:FindFirstChild("HumanoidRootPart")
         if not HRP then return end
 
-        if InvisFlingEnabled then
-            -- Invisible
-            for _, part in pairs(Character:GetChildren()) do
-                if part:IsA("BasePart") then
-                    part.Transparency = 1
-                    for _, decal in pairs(part:GetChildren()) do
-                        if decal:IsA("Decal") then decal.Transparency = 1 end
-                    end
-                end
-            end
-
-            -- Fling
-            InvisFlingConnection = RunService.Heartbeat:Connect(function()
+        if SpinFlingEnabled then
+            SpinFlingConnection = RunService.Heartbeat:Connect(function()
+                -- Putar karakter
+                HRP.CFrame = HRP.CFrame * CFrame.Angles(0, math.rad(30), 0)
+                -- Dorong player lain
                 for _, other in pairs(Players:GetPlayers()) do
                     if other ~= Player and other.Character and other.Character:FindFirstChild("HumanoidRootPart") then
                         local targetHRP = other.Character.HumanoidRootPart
-                        local flingVelocity = Instance.new("BodyVelocity")
-                        flingVelocity.Velocity = (targetHRP.Position - HRP.Position).Unit * 100
-                        flingVelocity.MaxForce = Vector3.new(9e9,9e9,9e9)
-                        flingVelocity.Parent = HRP
-                        game:GetService("Debris"):AddItem(flingVelocity,0.1)
+                        local direction = (targetHRP.Position - HRP.Position).Unit
+                        targetHRP.Velocity = direction * 100
                     end
                 end
             end)
         else
-            -- Reset
-            for _, part in pairs(Character:GetChildren()) do
-                if part:IsA("BasePart") then
-                    part.Transparency = 0
-                    for _, decal in pairs(part:GetChildren()) do
-                        if decal:IsA("Decal") then decal.Transparency = 0 end
-                    end
-                end
-            end
-            if InvisFlingConnection then
-                InvisFlingConnection:Disconnect()
-                InvisFlingConnection = nil
+            if SpinFlingConnection then
+                SpinFlingConnection:Disconnect()
+                SpinFlingConnection = nil
             end
         end
     end
@@ -348,5 +328,5 @@ Player.CharacterAdded:Connect(function(c)
     Humanoid = c:WaitForChild("Humanoid")
     if WalkSpeedEnabled then Humanoid.WalkSpeed = CustomWalkSpeed end
     if FlyEnabled then FlyEnabled = false end
-    if InvisFlingEnabled then InvisFlingEnabled = false end
+    if SpinFlingEnabled then SpinFlingEnabled = false end
 end)
