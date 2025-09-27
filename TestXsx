@@ -1,4 +1,4 @@
--- // XSX Styled Movement Menu (Revised UI)
+-- // XSX Styled Movement Menu (Revised UI + Drag on Title)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -27,7 +27,7 @@ Main.Position = UDim2.new(0.25,0,0.25,0)
 Main.BackgroundColor3 = Color3.fromRGB(20,20,20)
 Main.BorderSizePixel = 0
 Main.Active = true
-Main.Draggable = true
+Main.Draggable = false
 Instance.new("UICorner", Main).CornerRadius = UDim.new(0,8)
 
 -- Title Bar
@@ -40,6 +40,32 @@ Title.Font = Enum.Font.GothamBold
 Title.TextSize = 18
 Title.TextColor3 = Color3.fromRGB(255,255,255)
 Title.TextXAlignment = Enum.TextXAlignment.Left
+
+-- Dragging via Title
+local dragging, dragInput, dragStart, startPos
+Title.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = Main.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+Title.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then
+        dragInput = input
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        Main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
 
 -- Minimize button
 local MinBtn = Instance.new("TextButton", Main)
