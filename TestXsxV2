@@ -1,89 +1,46 @@
-["invisfling"] = {
-    Prefix = ";",
-    Commands = {"invisfling"},
-    Description = "Toggle invisibility and fling effect",
-    Fun = true,
-    AdminLevel = "Admins",
-    Function = function(plr, args)
-        local character = plr.Character
-        if not character then return end
+-- Inisialisasi Rayfield
+local Rayfield = loadstring(game:HttpGet("https://raw.githubusercontent.com/shlexware/Rayfield/main/source"))()
 
-        -- marker untuk status toggle
-        local toggled = character:FindFirstChild("InvisFlingToggled")
-        local isOn = toggled and toggled.Value
+local Window = Rayfield:CreateWindow({
+    Name = "Infinite Yield Admin",
+    LoadingTitle = "Loading Admin Scripts...",
+    ThemeColor = Color3.fromRGB(255, 0, 0)
+})
 
-        if isOn then
-            -- turn off: buat karakter terlihat kembali
-            for _, part in pairs(character:GetDescendants()) do
-                if part:IsA("BasePart") then
-                    part.Transparency = 0
-                    if part:FindFirstChild("Decal") then
-                        part.Decal.Transparency = 0
-                    end
-                elseif part:IsA("Accessory") and part:FindFirstChild("Handle") then
-                    part.Handle.Transparency = 0
-                end
+-- Pastikan tabel Commands berisi semua perintah Infinite Yield
+-- Contoh: _G.Commands = {["invisfling"] = {...}, ["fly"] = {...}, ...}
+
+-- Fungsi untuk menambahkan tombol perintah
+local function AddCommandButton(name, commandName)
+    Window:CreateButton({
+        Name = name,
+        Callback = function()
+            local plr = game.Players.LocalPlayer
+            local command = _G.Commands and _G.Commands[commandName]
+            if command and command.Function then
+                command.Function(plr, {})
+            else
+                warn("Perintah "..commandName.." tidak ditemukan!")
             end
+        end
+    })
+end
 
-            -- putuskan koneksi fling
-            local hrp = character:FindFirstChild("HumanoidRootPart")
-            if hrp and hrp:FindFirstChild("InvisFlingConnection") then
-                hrp.InvisFlingConnection.Value:Disconnect()
-                hrp.InvisFlingConnection:Destroy()
-            end
+-- Tambahkan tombol perintah
+AddCommandButton("Toggle InvisFling", "invisfling")
+AddCommandButton("Fly", "fly")
+AddCommandButton("God Mode", "god")
+AddCommandButton("Noclip", "noclip")
+AddCommandButton("Teleport to Player", "tpto") -- jika ada
+AddCommandButton("Bring Player", "bring")       -- jika ada
 
-            if toggled then toggled:Destroy() end
-            plr:SendNotification({Title="InvisFling", Text="Effect OFF"})
-        else
-            -- turn on: buat karakter invisible dan aktifkan fling
-            local hrp = character:FindFirstChild("HumanoidRootPart")
-            if not hrp then return end
-
-            -- invisible
-            for _, part in pairs(character:GetDescendants()) do
-                if part:IsA("BasePart") then
-                    part.Transparency = 1
-                    if part:FindFirstChild("Decal") then
-                        part.Decal.Transparency = 1
-                    end
-                elseif part:IsA("Accessory") and part:FindFirstChild("Handle") then
-                    part.Handle.Transparency = 1
-                end
-            end
-
-            -- fling connection
-            if hrp:FindFirstChild("InvisFlingConnection") then
-                hrp.InvisFlingConnection.Value:Disconnect()
-                hrp.InvisFlingConnection:Destroy()
-            end
-
-            local conn
-            conn = hrp.Touched:Connect(function(hit)
-                local otherHumanoid = hit.Parent:FindFirstChild("Humanoid")
-                if otherHumanoid and hit.Parent ~= character then
-                    local otherHRP = hit.Parent:FindFirstChild("HumanoidRootPart")
-                    if otherHRP then
-                        local bodyVelocity = Instance.new("BodyVelocity")
-                        bodyVelocity.Velocity = Vector3.new(0,50,0)
-                        bodyVelocity.MaxForce = Vector3.new(1e5,1e5,1e5)
-                        bodyVelocity.Parent = otherHRP
-                        game:GetService("Debris"):AddItem(bodyVelocity, 0.5)
-                    end
-                end
-            end)
-
-            -- simpan koneksi dan status toggle
-            local markerConn = Instance.new("ObjectValue")
-            markerConn.Name = "InvisFlingConnection"
-            markerConn.Value = conn
-            markerConn.Parent = hrp
-
-            local markerToggle = Instance.new("BoolValue")
-            markerToggle.Name = "InvisFlingToggled"
-            markerToggle.Value = true
-            markerToggle.Parent = character
-
-            plr:SendNotification({Title="InvisFling", Text="Effect ON"})
+-- Tambahkan tombol tambahan lain sesuai kebutuhan
+Window:CreateButton({
+    Name = "Reset Character",
+    Callback = function()
+        local plr = game.Players.LocalPlayer
+        if plr.Character then
+            plr.Character:BreakJoints()
         end
     end
-}
+})
