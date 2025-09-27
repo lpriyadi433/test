@@ -1,9 +1,4 @@
---[[
-    Movement Menu dengan UI ala xsx Lib
-    Dibuat ulang agar menyerupai UI framework xsx (tab system, watermark, style modern)
---]]
-
--- Services
+-- // XSX Styled Movement Menu
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -21,7 +16,7 @@ local BodyGyro, BodyVelocity, FlyConn
 
 -- Parent aman
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "xsxMenu"
+ScreenGui.Name = "XSXMovementUI"
 ScreenGui.ResetOnSpawn = false
 if gethui then
     ScreenGui.Parent = gethui()
@@ -32,51 +27,39 @@ else
     ScreenGui.Parent = Player:WaitForChild("PlayerGui")
 end
 
--- === WATERMARK ===
-local Watermark = Instance.new("TextLabel", ScreenGui)
-Watermark.Size = UDim2.new(0,300,0,25)
-Watermark.Position = UDim2.new(0,15,0,15)
-Watermark.BackgroundTransparency = 1
-Watermark.Text = "xsx UI | FPS: 0 | Ping: 0ms"
-Watermark.TextColor3 = Color3.fromRGB(200,200,200)
-Watermark.Font = Enum.Font.GothamBold
-Watermark.TextSize = 14
-Watermark.TextXAlignment = Enum.TextXAlignment.Left
-
--- update watermark
-task.spawn(function()
-    while task.wait(1) do
-        local fps = math.floor(1/RunService.RenderStepped:Wait())
-        local ping = math.floor(Players.LocalPlayer:GetNetworkPing()*1000)
-        Watermark.Text = string.format("xsx UI | FPS: %d | Ping: %dms", fps, ping)
-    end
-end)
-
--- === MAIN WINDOW ===
+-- Main window
 local Main = Instance.new("Frame", ScreenGui)
-Main.Size = UDim2.new(0, 500, 0, 350)
-Main.Position = UDim2.new(0.25,0,0.2,0)
-Main.BackgroundColor3 = Color3.fromRGB(25,25,25)
+Main.Size = UDim2.new(0, 500, 0, 320)
+Main.Position = UDim2.new(0.2,0,0.2,0)
+Main.BackgroundColor3 = Color3.fromRGB(20,20,20)
 Main.BorderSizePixel = 0
-Main.ClipsDescendants = true
+Main.Active = true
+Main.Draggable = true
 
-local UICorner = Instance.new("UICorner", Main)
-UICorner.CornerRadius = UDim.new(0, 12)
+local UICornerMain = Instance.new("UICorner", Main)
+UICornerMain.CornerRadius = UDim.new(0,8)
 
-local UIStroke = Instance.new("UIStroke", Main)
-UIStroke.Color = Color3.fromRGB(60,60,60)
-UIStroke.Thickness = 2
+-- Title Bar
+local Title = Instance.new("TextLabel", Main)
+Title.Size = UDim2.new(1, -90, 0, 40)
+Title.Position = UDim2.new(0, 10, 0, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "⚡ xsx Movement Menu"
+Title.Font = Enum.Font.GothamBold
+Title.TextScaled = true
+Title.TextColor3 = Color3.fromRGB(255,255,255)
+Title.TextXAlignment = Enum.TextXAlignment.Left
 
--- Title bar
-local TitleBar = Instance.new("TextLabel", Main)
-TitleBar.Size = UDim2.new(1, -60, 0, 40)
-TitleBar.Position = UDim2.new(0,15,0,0)
-TitleBar.BackgroundTransparency = 1
-TitleBar.Text = "⚡ xsx Movement Menu"
-TitleBar.TextColor3 = Color3.fromRGB(255,255,255)
-TitleBar.Font = Enum.Font.GothamBold
-TitleBar.TextSize = 18
-TitleBar.TextXAlignment = Enum.TextXAlignment.Left
+-- Minimize button
+local MinBtn = Instance.new("TextButton", Main)
+MinBtn.Size = UDim2.new(0,30,0,30)
+MinBtn.Position = UDim2.new(1,-80,0,5)
+MinBtn.BackgroundColor3 = Color3.fromRGB(80,80,80)
+MinBtn.Text = "—"
+MinBtn.TextColor3 = Color3.fromRGB(255,255,255)
+MinBtn.Font = Enum.Font.GothamBold
+MinBtn.TextScaled = true
+Instance.new("UICorner", MinBtn).CornerRadius = UDim.new(0,6)
 
 -- Close button
 local CloseBtn = Instance.new("TextButton", Main)
@@ -93,117 +76,107 @@ CloseBtn.MouseButton1Click:Connect(function()
     ScreenGui:Destroy()
 end)
 
--- Tabs container
+-- Sidebar TabBar
 local TabBar = Instance.new("Frame", Main)
 TabBar.Size = UDim2.new(0,120,1,-40)
 TabBar.Position = UDim2.new(0,0,0,40)
-TabBar.BackgroundColor3 = Color3.fromRGB(20,20,20)
-Instance.new("UICorner", TabBar).CornerRadius = UDim.new(0,12)
+TabBar.BackgroundColor3 = Color3.fromRGB(15,15,15)
+Instance.new("UICorner", TabBar).CornerRadius = UDim.new(0,8)
 
+local TabLayout = Instance.new("UIListLayout", TabBar)
+TabLayout.SortOrder = Enum.SortOrder.LayoutOrder
+TabLayout.Padding = UDim.new(0,5)
+
+-- Pages
 local Pages = Instance.new("Frame", Main)
 Pages.Size = UDim2.new(1,-130,1,-50)
-Pages.Position = UDim2.new(0,130,0,45)
+Pages.Position = UDim2.new(0,130,0,40)
 Pages.BackgroundTransparency = 1
 
--- function buat tab
+-- Tab system
 local Tabs = {}
+local CurrentPage
+
 local function CreateTab(name)
     local Btn = Instance.new("TextButton", TabBar)
-    Btn.Size = UDim2.new(1,0,0,40)
-    Btn.BackgroundTransparency = 1
-    Btn.Text = name
+    Btn.Size = UDim2.new(1,-10,0,40)
+    Btn.BackgroundColor3 = Color3.fromRGB(30,30,30)
+    Btn.TextColor3 = Color3.fromRGB(255,255,255)
     Btn.Font = Enum.Font.GothamBold
-    Btn.TextColor3 = Color3.fromRGB(200,200,200)
-    Btn.TextSize = 14
+    Btn.TextScaled = true
+    Btn.Text = name
+    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0,6)
 
-    local Page = Instance.new("ScrollingFrame", Pages)
+    local Page = Instance.new("Frame", Pages)
     Page.Size = UDim2.new(1,0,1,0)
-    Page.BackgroundTransparency = 1
     Page.Visible = false
-    Page.CanvasSize = UDim2.new(0,0,0,400)
+    Page.BackgroundTransparency = 1
 
-    local UIList = Instance.new("UIListLayout", Page)
-    UIList.Padding = UDim.new(0,8)
-    UIList.SortOrder = Enum.SortOrder.LayoutOrder
-
-    Tabs[name] = {Button=Btn, Page=Page}
+    Tabs[name] = {Button = Btn, Page = Page}
 
     Btn.MouseButton1Click:Connect(function()
-        for _,t in pairs(Tabs) do
-            t.Page.Visible = false
-            t.Button.TextColor3 = Color3.fromRGB(200,200,200)
-        end
+        if CurrentPage then CurrentPage.Visible = false end
         Page.Visible = true
-        Btn.TextColor3 = Color3.fromRGB(255,255,255)
+        CurrentPage = Page
     end)
+
+    if not CurrentPage then
+        CurrentPage = Page
+        Page.Visible = true
+    end
 
     return Page
 end
 
--- Buat tab
-local MovementTab = CreateTab("Movement")
-local VisualTab = CreateTab("Visual")
-local MiscTab = CreateTab("Misc")
+-- === Movement Tab ===
+local MovementPage = CreateTab("Movement")
 
--- default tab
-Tabs["Movement"].Button.TextColor3 = Color3.fromRGB(255,255,255)
-Tabs["Movement"].Page.Visible = true
-
--- function buat button styled
-local function CreateButton(text, parent, callback)
+-- Utility: styled button
+local function CreateButton(parent,text,callback)
     local Btn = Instance.new("TextButton", parent)
-    Btn.Size = UDim2.new(0.5,-10,0,35)
-    Btn.BackgroundColor3 = Color3.fromRGB(50,50,50)
-    Btn.Text = text
-    Btn.Font = Enum.Font.GothamBold
-    Btn.TextSize = 14
+    Btn.Size = UDim2.new(0.6,0,0,40)
+    Btn.BackgroundColor3 = Color3.fromRGB(40,40,40)
     Btn.TextColor3 = Color3.fromRGB(255,255,255)
-    Btn.AutoButtonColor = true
+    Btn.Font = Enum.Font.GothamBold
+    Btn.TextScaled = true
+    Btn.Text = text
     Instance.new("UICorner", Btn).CornerRadius = UDim.new(0,6)
-
     Btn.MouseButton1Click:Connect(callback)
     return Btn
 end
 
--- function buat slider styled
-local function CreateSlider(label, min, max, default, parent, callback)
-    local Frame = Instance.new("Frame", parent)
-    Frame.Size = UDim2.new(0.9,0,0,40)
-    Frame.BackgroundColor3 = Color3.fromRGB(40,40,40)
-    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0,6)
+-- Utility: styled slider
+local function CreateSlider(parent,text,min,max,default,callback)
+    local Label = Instance.new("TextLabel", parent)
+    Label.Size = UDim2.new(1,0,0,30)
+    Label.BackgroundTransparency = 1
+    Label.Text = text
+    Label.Font = Enum.Font.GothamBold
+    Label.TextScaled = true
+    Label.TextColor3 = Color3.fromRGB(255,255,255)
+    Label.TextXAlignment = Enum.TextXAlignment.Left
 
-    local Title = Instance.new("TextLabel", Frame)
-    Title.Size = UDim2.new(0.5,0,1,0)
-    Title.BackgroundTransparency = 1
-    Title.Text = label
-    Title.TextColor3 = Color3.fromRGB(255,255,255)
-    Title.Font = Enum.Font.GothamBold
-    Title.TextSize = 14
-    Title.TextXAlignment = Enum.TextXAlignment.Left
+    local SliderFrame = Instance.new("Frame", parent)
+    SliderFrame.Size = UDim2.new(1,0,0,20)
+    SliderFrame.BackgroundColor3 = Color3.fromRGB(50,50,50)
+    Instance.new("UICorner", SliderFrame).CornerRadius = UDim.new(0,6)
 
-    local ValueLabel = Instance.new("TextLabel", Frame)
-    ValueLabel.Size = UDim2.new(0.2,0,1,0)
-    ValueLabel.Position = UDim2.new(0.8,0,0,0)
-    ValueLabel.BackgroundTransparency = 1
-    ValueLabel.Text = tostring(default)
-    ValueLabel.TextColor3 = Color3.fromRGB(200,200,200)
-    ValueLabel.Font = Enum.Font.Gotham
-    ValueLabel.TextSize = 14
-    ValueLabel.TextXAlignment = Enum.TextXAlignment.Right
-
-    local Bar = Instance.new("Frame", Frame)
-    Bar.Size = UDim2.new(0.9,0,0,6)
-    Bar.Position = UDim2.new(0.05,0,1,-10)
-    Bar.BackgroundColor3 = Color3.fromRGB(60,60,60)
-    Instance.new("UICorner", Bar).CornerRadius = UDim.new(0,3)
-
-    local Fill = Instance.new("Frame", Bar)
+    local Fill = Instance.new("Frame", SliderFrame)
     Fill.Size = UDim2.new((default-min)/(max-min),0,1,0)
     Fill.BackgroundColor3 = Color3.fromRGB(0,180,255)
-    Instance.new("UICorner", Fill).CornerRadius = UDim.new(0,3)
+    Instance.new("UICorner", Fill).CornerRadius = UDim.new(0,6)
+
+    local ValueLabel = Instance.new("TextLabel", SliderFrame)
+    ValueLabel.Size = UDim2.new(0,50,1,0)
+    ValueLabel.Position = UDim2.new(1,5,0,0)
+    ValueLabel.BackgroundTransparency = 1
+    ValueLabel.Text = tostring(default)
+    ValueLabel.Font = Enum.Font.Gotham
+    ValueLabel.TextScaled = true
+    ValueLabel.TextColor3 = Color3.fromRGB(200,200,200)
 
     local dragging = false
-    Bar.InputBegan:Connect(function(input)
+    SliderFrame.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             dragging = true
         end
@@ -215,8 +188,8 @@ local function CreateSlider(label, min, max, default, parent, callback)
     end)
     UserInputService.InputChanged:Connect(function(input)
         if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-            local relX = math.clamp((input.Position.X - Bar.AbsolutePosition.X) / Bar.AbsoluteSize.X, 0, 1)
-            local value = math.floor(min + (max-min) * relX)
+            local relX = math.clamp((input.Position.X - SliderFrame.AbsolutePosition.X) / SliderFrame.AbsoluteSize.X,0,1)
+            local value = math.floor(min + (max-min)*relX)
             Fill.Size = UDim2.new(relX,0,1,0)
             ValueLabel.Text = tostring(value)
             callback(value)
@@ -224,8 +197,16 @@ local function CreateSlider(label, min, max, default, parent, callback)
     end)
 end
 
--- === TAB MOVEMENT CONTENT ===
-local WalkBtn = CreateButton("Toggle WalkSpeed", MovementTab, function()
+-- Layout for MovementPage
+local UIList = Instance.new("UIListLayout", MovementPage)
+UIList.Padding = UDim.new(0,10)
+UIList.FillDirection = Enum.FillDirection.Vertical
+UIList.HorizontalAlignment = Enum.HorizontalAlignment.Center
+UIList.VerticalAlignment = Enum.VerticalAlignment.Top
+UIList.SortOrder = Enum.SortOrder.LayoutOrder
+
+-- WalkSpeed Toggle
+CreateButton(MovementPage,"Toggle WalkSpeed",function()
     WalkSpeedEnabled = not WalkSpeedEnabled
     if WalkSpeedEnabled then
         Humanoid.WalkSpeed = CustomWalkSpeed
@@ -234,14 +215,16 @@ local WalkBtn = CreateButton("Toggle WalkSpeed", MovementTab, function()
     end
 end)
 
-CreateSlider("WalkSpeed", 16, 200, 16, MovementTab, function(val)
+-- WalkSpeed Slider
+CreateSlider(MovementPage,"WalkSpeed",0,200,16,function(val)
     CustomWalkSpeed = val
     if WalkSpeedEnabled then
-        Humanoid.WalkSpeed = CustomWalkSpeed
+        Humanoid.WalkSpeed = val
     end
 end)
 
-local FlyBtn = CreateButton("Toggle Fly", MovementTab, function()
+-- Fly Toggle
+CreateButton(MovementPage,"Toggle Fly",function()
     FlyEnabled = not FlyEnabled
     if FlyEnabled then
         local HRP = Character:WaitForChild("HumanoidRootPart")
@@ -270,16 +253,32 @@ local FlyBtn = CreateButton("Toggle Fly", MovementTab, function()
     end
 end)
 
-CreateSlider("FlySpeed", 50, 300, 100, MovementTab, function(val)
+-- FlySpeed Slider
+CreateSlider(MovementPage,"FlySpeed",0,300,100,function(val)
     FlySpeed = val
+end)
+
+-- Placeholder Tabs
+CreateTab("Visual")
+CreateTab("Misc")
+
+-- Minimize logic
+local minimized = false
+MinBtn.MouseButton1Click:Connect(function()
+    minimized = not minimized
+    Pages.Visible = not minimized
+    TabBar.Visible = not minimized
+    Main.Size = minimized and UDim2.new(0,500,0,50) or UDim2.new(0,500,0,320)
 end)
 
 -- Respawn fix
 Player.CharacterAdded:Connect(function(c)
     Character = c
     Humanoid = c:WaitForChild("Humanoid")
-    if WalkSpeedEnabled then Humanoid.WalkSpeed = CustomWalkSpeed end
+    if WalkSpeedEnabled then
+        Humanoid.WalkSpeed = CustomWalkSpeed
+    end
     if FlyEnabled then
-        FlyBtn:Activate()
+        FlyEnabled = false
     end
 end)
