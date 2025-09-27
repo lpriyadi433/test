@@ -44,27 +44,27 @@ Title.TextXAlignment = Enum.TextXAlignment.Left
 -- Dragging via Title
 local dragging, dragInput, dragStart, startPos
 Title.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = true
-        dragStart = input.Position
-        startPos = Main.Position
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-            end
-        end)
-    end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = Main.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
 end)
 Title.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement then
-        dragInput = input
-    end
+    if input.UserInputType == Enum.UserInputType.MouseMovement then
+        dragInput = input
+    end
 end)
 UserInputService.InputChanged:Connect(function(input)
-    if input == dragInput and dragging then
-        local delta = input.Position - dragStart
-        Main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-    end
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        Main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
 end)
 
 -- Minimize button
@@ -109,106 +109,106 @@ Pages.BackgroundTransparency = 1
 -- Tab system
 local Tabs, CurrentPage = {}, nil
 local function CreateTab(name)
-    local Btn = Instance.new("TextButton", TabBar)
-    Btn.Size = UDim2.new(1,-10,0,40)
-    Btn.BackgroundColor3 = Color3.fromRGB(30,30,30)
-    Btn.TextColor3 = Color3.fromRGB(255,255,255)
-    Btn.Font = Enum.Font.GothamBold
-    Btn.TextSize = 16
-    Btn.Text = name
-    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0,6)
+    local Btn = Instance.new("TextButton", TabBar)
+    Btn.Size = UDim2.new(1,-10,0,40)
+    Btn.BackgroundColor3 = Color3.fromRGB(30,30,30)
+    Btn.TextColor3 = Color3.fromRGB(255,255,255)
+    Btn.Font = Enum.Font.GothamBold
+    Btn.TextSize = 16
+    Btn.Text = name
+    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0,6)
 
-    local Page = Instance.new("Frame", Pages)
-    Page.Size = UDim2.new(1,0,1,0)
-    Page.Visible = false
-    Page.BackgroundTransparency = 1
+    local Page = Instance.new("Frame", Pages)
+    Page.Size = UDim2.new(1,0,1,0)
+    Page.Visible = false
+    Page.BackgroundTransparency = 1
 
-    Tabs[name] = {Button = Btn, Page = Page}
-    Btn.MouseButton1Click:Connect(function()
-        if CurrentPage then CurrentPage.Visible = false end
-        Page.Visible = true
-        CurrentPage = Page
-    end)
+    Tabs[name] = {Button = Btn, Page = Page}
+    Btn.MouseButton1Click:Connect(function()
+        if CurrentPage then CurrentPage.Visible = false end
+        Page.Visible = true
+        CurrentPage = Page
+    end)
 
-    if not CurrentPage then
-        CurrentPage = Page
-        Page.Visible = true
-    end
-    return Page
+    if not CurrentPage then
+        CurrentPage = Page
+        Page.Visible = true
+    end
+    return Page
 end
 
 -- Utility: styled button with toggle support
 local function CreateToggleButton(parent,text,getState,setState)
-    local Btn = Instance.new("TextButton", parent)
-    Btn.Size = UDim2.new(0.9,0,0,40)
-    Btn.BackgroundColor3 = Color3.fromRGB(40,40,40)
-    Btn.Font = Enum.Font.GothamBold
-    Btn.TextSize = 16
-    Btn.Text = text
-    Btn.TextColor3 = getState() and Color3.fromRGB(0,120,255) or Color3.fromRGB(220,60,60)
-    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0,6)
+    local Btn = Instance.new("TextButton", parent)
+    Btn.Size = UDim2.new(0.9,0,0,40)
+    Btn.BackgroundColor3 = Color3.fromRGB(40,40,40)
+    Btn.Font = Enum.Font.GothamBold
+    Btn.TextSize = 16
+    Btn.Text = text
+    Btn.TextColor3 = getState() and Color3.fromRGB(0,120,255) or Color3.fromRGB(220,60,60)
+    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0,6)
 
-    Btn.MouseButton1Click:Connect(function()
-        setState(not getState())
-        Btn.TextColor3 = getState() and Color3.fromRGB(0,120,255) or Color3.fromRGB(220,60,60)
-    end)
+    Btn.MouseButton1Click:Connect(function()
+        setState(not getState())
+        Btn.TextColor3 = getState() and Color3.fromRGB(0,120,255) or Color3.fromRGB(220,60,60)
+    end)
 
-    return Btn
+    return Btn
 end
 
 -- Utility: styled slider
 local function CreateSlider(parent,text,min,max,default,callback)
-    local Holder = Instance.new("Frame", parent)
-    Holder.Size = UDim2.new(0.9,0,0,60)
-    Holder.BackgroundTransparency = 1
+    local Holder = Instance.new("Frame", parent)
+    Holder.Size = UDim2.new(0.9,0,0,60)
+    Holder.BackgroundTransparency = 1
 
-    local Label = Instance.new("TextLabel", Holder)
-    Label.Size = UDim2.new(0.7,0,0,25)
-    Label.Position = UDim2.new(0,0,0,0)
-    Label.BackgroundTransparency = 1
-    Label.Text = text
-    Label.Font = Enum.Font.GothamBold
-    Label.TextSize = 16
-    Label.TextColor3 = Color3.fromRGB(255,255,255)
-    Label.TextXAlignment = Enum.TextXAlignment.Left
+    local Label = Instance.new("TextLabel", Holder)
+    Label.Size = UDim2.new(0.7,0,0,25)
+    Label.Position = UDim2.new(0,0,0,0)
+    Label.BackgroundTransparency = 1
+    Label.Text = text
+    Label.Font = Enum.Font.GothamBold
+    Label.TextSize = 16
+    Label.TextColor3 = Color3.fromRGB(255,255,255)
+    Label.TextXAlignment = Enum.TextXAlignment.Left
 
-    local ValueLabel = Instance.new("TextLabel", Holder)
-    ValueLabel.Size = UDim2.new(0.3,0,0,25)
-    ValueLabel.Position = UDim2.new(0.7,0,0,0)
-    ValueLabel.BackgroundTransparency = 1
-    ValueLabel.Text = tostring(default)
-    ValueLabel.Font = Enum.Font.Gotham
-    ValueLabel.TextSize = 14
-    ValueLabel.TextColor3 = Color3.fromRGB(200,200,200)
-    ValueLabel.TextXAlignment = Enum.TextXAlignment.Right
+    local ValueLabel = Instance.new("TextLabel", Holder)
+    ValueLabel.Size = UDim2.new(0.3,0,0,25)
+    ValueLabel.Position = UDim2.new(0.7,0,0,0)
+    ValueLabel.BackgroundTransparency = 1
+    ValueLabel.Text = tostring(default)
+    ValueLabel.Font = Enum.Font.Gotham
+    ValueLabel.TextSize = 14
+    ValueLabel.TextColor3 = Color3.fromRGB(200,200,200)
+    ValueLabel.TextXAlignment = Enum.TextXAlignment.Right
 
-    local SliderFrame = Instance.new("Frame", Holder)
-    SliderFrame.Size = UDim2.new(1,0,0,20)
-    SliderFrame.Position = UDim2.new(0,0,0,35)
-    SliderFrame.BackgroundColor3 = Color3.fromRGB(50,50,50)
-    Instance.new("UICorner", SliderFrame).CornerRadius = UDim.new(0,6)
+    local SliderFrame = Instance.new("Frame", Holder)
+    SliderFrame.Size = UDim2.new(1,0,0,20)
+    SliderFrame.Position = UDim2.new(0,0,0,35)
+    SliderFrame.BackgroundColor3 = Color3.fromRGB(50,50,50)
+    Instance.new("UICorner", SliderFrame).CornerRadius = UDim.new(0,6)
 
-    local Fill = Instance.new("Frame", SliderFrame)
-    Fill.Size = UDim2.new((default-min)/(max-min),0,1,0)
-    Fill.BackgroundColor3 = Color3.fromRGB(0,180,255)
-    Instance.new("UICorner", Fill).CornerRadius = UDim.new(0,6)
+    local Fill = Instance.new("Frame", SliderFrame)
+    Fill.Size = UDim2.new((default-min)/(max-min),0,1,0)
+    Fill.BackgroundColor3 = Color3.fromRGB(0,180,255)
+    Instance.new("UICorner", Fill).CornerRadius = UDim.new(0,6)
 
-    local dragging = false
-    SliderFrame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true end
-    end)
-    UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
-    end)
-    UserInputService.InputChanged:Connect(function(input)
-        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-            local relX = math.clamp((input.Position.X - SliderFrame.AbsolutePosition.X) / SliderFrame.AbsoluteSize.X,0,1)
-            local value = math.floor(min + (max-min)*relX)
-            Fill.Size = UDim2.new(relX,0,1,0)
-            ValueLabel.Text = tostring(value)
-            callback(value)
-        end
-    end)
+    local dragging = false
+    SliderFrame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true end
+    end)
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local relX = math.clamp((input.Position.X - SliderFrame.AbsolutePosition.X) / SliderFrame.AbsoluteSize.X,0,1)
+            local value = math.floor(min + (max-min)*relX)
+            Fill.Size = UDim2.new(relX,0,1,0)
+            ValueLabel.Text = tostring(value)
+            callback(value)
+        end
+    end)
 end
 
 -- === Movement Tab ===
@@ -219,52 +219,56 @@ UIList.FillDirection = Enum.FillDirection.Vertical
 UIList.HorizontalAlignment = Enum.HorizontalAlignment.Center
 UIList.VerticalAlignment = Enum.VerticalAlignment.Top
 
--- WalkSpeed: tombol di atas slider
-local WalkBtn = CreateToggleButton(MovementPage,"WalkSpeed",
-    function() return WalkSpeedEnabled end,
-    function(state)
-        WalkSpeedEnabled = state
-        Humanoid.WalkSpeed = WalkSpeedEnabled and CustomWalkSpeed or 16
-    end
-)
+-- WalkSpeed Slider
 CreateSlider(MovementPage,"WalkSpeed",0,200,16,function(val)
-    CustomWalkSpeed = val
-    if WalkSpeedEnabled then Humanoid.WalkSpeed = val end
+    CustomWalkSpeed = val
+    if WalkSpeedEnabled then Humanoid.WalkSpeed = val end
 end)
 
--- Fly: tombol di atas slider
-local FlyBtn = CreateToggleButton(MovementPage,"Fly",
-    function() return FlyEnabled end,
-    function(state)
-        FlyEnabled = state
-        if FlyEnabled then
-            local HRP = Character:WaitForChild("HumanoidRootPart")
-            Humanoid.PlatformStand = true
-            BodyGyro = Instance.new("BodyGyro", HRP)
-            BodyGyro.MaxTorque = Vector3.new(9e9,9e9,9e9)
-            BodyVelocity = Instance.new("BodyVelocity", HRP)
-            BodyVelocity.MaxForce = Vector3.new(9e9,9e9,9e9)
-            FlyConn = RunService.RenderStepped:Connect(function()
-                local camCF = workspace.CurrentCamera.CFrame
-                local move = Vector3.new()
-                if UserInputService:IsKeyDown(Enum.KeyCode.W) then move += camCF.LookVector end
-                if UserInputService:IsKeyDown(Enum.KeyCode.S) then move -= camCF.LookVector end
-                if UserInputService:IsKeyDown(Enum.KeyCode.A) then move -= camCF.RightVector end
-                if UserInputService:IsKeyDown(Enum.KeyCode.D) then move += camCF.RightVector end
-                if UserInputService:IsKeyDown(Enum.KeyCode.Space) then move += Vector3.new(0,1,0) end
-                if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then move -= Vector3.new(0,1,0) end
-                BodyVelocity.Velocity = move.Magnitude > 0 and move.Unit * FlySpeed or Vector3.new()
-                BodyGyro.CFrame = camCF
-            end)
-        else
-            if FlyConn then FlyConn:Disconnect() end
-            if BodyVelocity then BodyVelocity:Destroy() end
-            if BodyGyro then BodyGyro:Destroy() end
-            Humanoid.PlatformStand = false
-        end
-    end
+-- WalkSpeed toggle (DIPINDAH KE BAWAH SLIDER WALK SPEED)
+CreateToggleButton(MovementPage,"WalkSpeed",
+    function() return WalkSpeedEnabled end,
+    function(state)
+        WalkSpeedEnabled = state
+        Humanoid.WalkSpeed = WalkSpeedEnabled and CustomWalkSpeed or 16
+    end
 )
+
+-- FlySpeed Slider
 CreateSlider(MovementPage,"FlySpeed",0,300,100,function(val) FlySpeed = val end)
+
+-- Fly toggle (DIPINDAH KE BAWAH SLIDER FLYSPEED)
+CreateToggleButton(MovementPage,"Fly",
+    function() return FlyEnabled end,
+    function(state)
+        FlyEnabled = state
+        if FlyEnabled then
+            local HRP = Character:WaitForChild("HumanoidRootPart")
+            Humanoid.PlatformStand = true
+            BodyGyro = Instance.new("BodyGyro", HRP)
+            BodyGyro.MaxTorque = Vector3.new(9e9,9e9,9e9)
+            BodyVelocity = Instance.new("BodyVelocity", HRP)
+            BodyVelocity.MaxForce = Vector3.new(9e9,9e9,9e9)
+            FlyConn = RunService.RenderStepped:Connect(function()
+                local camCF = workspace.CurrentCamera.CFrame
+                local move = Vector3.new()
+                if UserInputService:IsKeyDown(Enum.KeyCode.W) then move += camCF.LookVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.S) then move -= camCF.LookVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.A) then move -= camCF.RightVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.D) then move += camCF.RightVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.Space) then move += Vector3.new(0,1,0) end
+                if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then move -= Vector3.new(0,1,0) end
+                BodyVelocity.Velocity = move.Magnitude > 0 and move.Unit * FlySpeed or Vector3.new()
+                BodyGyro.CFrame = camCF
+            end)
+        else
+            if FlyConn then FlyConn:Disconnect() end
+            if BodyVelocity then BodyVelocity:Destroy() end
+            if BodyGyro then BodyGyro:Destroy() end
+            Humanoid.PlatformStand = false
+        end
+    end
+)
 
 -- Placeholder Tabs
 CreateTab("Visual")
@@ -273,16 +277,16 @@ CreateTab("Misc")
 -- Minimize
 local minimized = false
 MinBtn.MouseButton1Click:Connect(function()
-    minimized = not minimized
-    Pages.Visible = not minimized
-    TabBar.Visible = not minimized
-    Main.Size = minimized and UDim2.new(0,500,0,50) or UDim2.new(0,500,0,320)
+    minimized = not minimized
+    Pages.Visible = not minimized
+    TabBar.Visible = not minimized
+    Main.Size = minimized and UDim2.new(0,500,0,50) or UDim2.new(0,500,0,320)
 end)
 
 -- Respawn Fix
 Player.CharacterAdded:Connect(function(c)
-    Character = c
-    Humanoid = c:WaitForChild("Humanoid")
-    if WalkSpeedEnabled then Humanoid.WalkSpeed = CustomWalkSpeed end
-    if FlyEnabled then FlyEnabled = false end
+    Character = c
+    Humanoid = c:WaitForChild("Humanoid")
+    if WalkSpeedEnabled then Humanoid.WalkSpeed = CustomWalkSpeed end
+    if FlyEnabled then FlyEnabled = false end
 end)
