@@ -14,11 +14,6 @@ local FlyEnabled = false
 local FlySpeed = 100
 local BodyGyro, BodyVelocity, FlyConn
 
--- Fling vars
-local FlingEnabled = false
-local FlingSpeed = 5000
-local FlingGyro, FlingFlingConn, NoclipConn
-
 -- Parent aman
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "XSXMovementUI"
@@ -238,55 +233,34 @@ CreateSlider(MovementPage,"WalkSpeed",0,200,16,function(val)
     if WalkSpeedEnabled then Humanoid.WalkSpeed = val end
 end)
 
--- === Misc Tab Features ===
-local MiscPage = CreateTab("Misc")
-local UIListMisc = Instance.new("UIListLayout", MiscPage)
-UIListMisc.Padding = UDim.new(0,10)
-UIListMisc.FillDirection = Enum.FillDirection.Vertical
-UIListMisc.HorizontalAlignment = Enum.HorizontalAlignment.Center
-UIListMisc.VerticalAlignment = Enum.VerticalAlignment.Top
-
--- Fly + Fling logic (refactored to prevent camera jitter)
-local function UpdateFlyMovement()
-    if not BodyVelocity then return end
-    local camCF = workspace.CurrentCamera.CFrame
-    local move = Vector3.new()
-    if UserInputService:IsKeyDown(Enum.KeyCode.W) then move += camCF.LookVector end
-    if UserInputService:IsKeyDown(Enum.KeyCode.S) then move -= camCF.LookVector end
-    if UserInputService:IsKeyDown(Enum.KeyCode.A) then move -= camCF.RightVector end
-    if UserInputService:IsKeyDown(Enum.KeyCode.D) then move += camCF.RightVector end
-    if UserInputService:IsKeyDown(Enum.KeyCode.Space) then move += Vector3.new(0,1,0) end
-    if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then move -= Vector3.new(0,1,0) end
-    BodyVelocity.Velocity = move.Magnitude > 0 and move.Unit * FlySpeed or Vector3.new()
-
-    if BodyGyro then
-        BodyGyro.CFrame = camCF
-    end
-end
-
 -- Fly toggle
 CreateToggleButton(MovementPage,"Fly",
     function() return FlyEnabled end,
     function(state)
         FlyEnabled = state
-        local HRP = Character:WaitForChild("HumanoidRootPart")
-
         if FlyEnabled then
+            local HRP = Character:WaitForChild("HumanoidRootPart")
             Humanoid.PlatformStand = true
-
-            if not FlingEnabled then
-                BodyGyro = Instance.new("BodyGyro", HRP)
-                BodyGyro.MaxTorque = Vector3.new(9e9,9e9,9e9)
-            end
-
+            BodyGyro = Instance.new("BodyGyro", HRP)
+            BodyGyro.MaxTorque = Vector3.new(9e9,9e9,9e9)
             BodyVelocity = Instance.new("BodyVelocity", HRP)
             BodyVelocity.MaxForce = Vector3.new(9e9,9e9,9e9)
-
-            FlyConn = RunService.RenderStepped:Connect(UpdateFlyMovement)
+            FlyConn = RunService.RenderStepped:Connect(function()
+                local camCF = workspace.CurrentCamera.CFrame
+                local move = Vector3.new()
+                if UserInputService:IsKeyDown(Enum.KeyCode.W) then move += camCF.LookVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.S) then move -= camCF.LookVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.A) then move -= camCF.RightVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.D) then move += camCF.RightVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.Space) then move += Vector3.new(0,1,0) end
+                if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then move -= Vector3.new(0,1,0) end
+                BodyVelocity.Velocity = move.Magnitude > 0 and move.Unit * FlySpeed or Vector3.new()
+                BodyGyro.CFrame = camCF
+            end)
         else
-            if FlyConn then FlyConn:Disconnect() FlyConn = nil end
-            if BodyVelocity then BodyVelocity:Destroy() BodyVelocity = nil end
-            if BodyGyro and not FlingEnabled then BodyGyro:Destroy() BodyGyro = nil end
+            if FlyConn then FlyConn:Disconnect() end
+            if BodyVelocity then BodyVelocity:Destroy() end
+            if BodyGyro then BodyGyro:Destroy() end
             Humanoid.PlatformStand = false
         end
     end
@@ -294,63 +268,9 @@ CreateToggleButton(MovementPage,"Fly",
 
 CreateSlider(MovementPage,"FlySpeed",0,300,100,function(val) FlySpeed = val end)
 
--- Fling toggle
-CreateToggleButton(MiscPage,"Fling",
-    function() return FlingEnabled end,
-    function(state)
-        FlingEnabled = state
-        local HRP = Character:WaitForChild("HumanoidRootPart")
-
-        -- NoClip
-        local function NoClip()
-            for _, part in pairs(Character:GetDescendants()) do
-                if part:IsA("BasePart") then
-                    part.CanCollide = false
-                end
-            end
-        end
-
-        if FlingEnabled then
-            if BodyGyro then BodyGyro:Destroy() BodyGyro = nil end
-
-            FlingGyro = Instance.new("BodyAngularVelocity", HRP)
-            FlingGyro.MaxTorque = Vector3.new(9e9,9e9,9e9)
-            FlingGyro.AngularVelocity = Vector3.new(FlingSpeed,FlingSpeed,FlingSpeed)
-
-            FlingFlingConn = RunService.RenderStepped:Connect(function()
-                if FlingGyro then
-                    FlingGyro.AngularVelocity = Vector3.new(FlingSpeed,FlingSpeed,FlingSpeed)
-                end
-            end)
-
-            NoclipConn = RunService.Stepped:Connect(NoClip)
-
-            if not FlyEnabled then
-                FlyEnabled = true
-                Humanoid.PlatformStand = true
-                BodyVelocity = Instance.new("BodyVelocity", HRP)
-                BodyVelocity.MaxForce = Vector3.new(9e9,9e9,9e9)
-                FlyConn = RunService.RenderStepped:Connect(UpdateFlyMovement)
-            end
-        else
-            if FlingFlingConn then FlingFlingConn:Disconnect() FlingFlingConn = nil end
-            if FlingGyro then FlingGyro:Destroy() FlingGyro = nil end
-            if NoclipConn then NoclipConn:Disconnect() NoclipConn = nil end
-
-            if FlyEnabled and not BodyGyro then
-                BodyGyro = Instance.new("BodyGyro", HRP)
-                BodyGyro.MaxTorque = Vector3.new(9e9,9e9,9e9)
-            end
-        end
-    end
-)
-
-CreateSlider(MiscPage,"Fling Speed",1000,20000,5000,function(val)
-    FlingSpeed = val
-    if FlingGyro then
-        FlingGyro.AngularVelocity = Vector3.new(FlingSpeed,FlingSpeed,FlingSpeed)
-    end
-end)
+-- Placeholder Tabs
+CreateTab("Visual")
+CreateTab("Misc")
 
 -- Minimize
 local minimized = false
@@ -366,5 +286,109 @@ Player.CharacterAdded:Connect(function(c)
     Character = c
     Humanoid = c:WaitForChild("Humanoid")
     if WalkSpeedEnabled then Humanoid.WalkSpeed = CustomWalkSpeed end
-    FlyEnabled = false
+    if FlyEnabled then FlyEnabled = false end
+end)
+
+-- === Misc Tab with Fling + Noclip ===
+local MiscPage = Tabs["Misc"].Page
+local UIListMisc = Instance.new("UIListLayout", MiscPage)
+UIListMisc.Padding = UDim.new(0,10)
+UIListMisc.FillDirection = Enum.FillDirection.Vertical
+UIListMisc.HorizontalAlignment = Enum.HorizontalAlignment.Center
+UIListMisc.VerticalAlignment = Enum.VerticalAlignment.Top
+
+-- Vars
+local FlingEnabled = false
+local FlingSpeed = 500
+local FlingPower = 100
+local NoclipManualEnabled = false
+local NoclipFlingEnabled = false
+local NoclipConn
+
+-- Fungsi gabungan Noclip
+local function UpdateNoclip()
+    local noclipActive = NoclipManualEnabled or NoclipFlingEnabled
+    for _, part in pairs(Character:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.CanCollide = not noclipActive
+        end
+    end
+end
+
+-- Loop global untuk Noclip
+NoclipConn = RunService.Stepped:Connect(UpdateNoclip)
+
+-- Toggle Noclip manual
+CreateToggleButton(MiscPage, "Noclip",
+    function() return NoclipManualEnabled end,
+    function(state)
+        NoclipManualEnabled = state
+        UpdateNoclip()
+    end
+)
+
+-- Toggle Fling
+CreateToggleButton(MiscPage, "Fling",
+    function() return type(FlingEnabled) == "table" end,
+    function(state)
+        local HRP = Character:WaitForChild("HumanoidRootPart")
+        local Hum = Character:WaitForChild("Humanoid")
+
+        if state then
+            -- BodyAngularVelocity untuk putar cepat
+            local BodyAngularVelocity = Instance.new("BodyAngularVelocity")
+            BodyAngularVelocity.MaxTorque = Vector3.new(1e6,1e6,1e6)
+            BodyAngularVelocity.AngularVelocity = Vector3.new(0,FlingSpeed,0)
+            BodyAngularVelocity.Parent = HRP
+
+            -- BodyVelocity untuk dorongan arah bebas
+            local BodyVel = Instance.new("BodyVelocity")
+            BodyVel.MaxForce = Vector3.new(9e5,9e5,9e5)
+            BodyVel.Velocity = Vector3.new(0,0,0)
+            BodyVel.Parent = HRP
+
+            -- Update arah fling sesuai input
+            local flingConn
+            flingConn = RunService.RenderStepped:Connect(function()
+                if not FlingEnabled then return end
+                local move = Vector3.new()
+                local camCF = workspace.CurrentCamera.CFrame
+                if UserInputService:IsKeyDown(Enum.KeyCode.W) then move += camCF.LookVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.S) then move -= camCF.LookVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.A) then move -= camCF.RightVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.D) then move += camCF.RightVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.Space) then move += Vector3.new(0,1,0) end
+                if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then move -= Vector3.new(0,1,0) end
+                BodyVel.Velocity = move.Magnitude > 0 and move.Unit * FlingPower or Vector3.new()
+            end)
+
+            -- Aktifkan noclip Fling
+            NoclipFlingEnabled = true
+            UpdateNoclip()
+
+            -- Simpan reference Fling
+            FlingEnabled = {Angular = BodyAngularVelocity, Velocity = BodyVel, FlingConn = flingConn}
+
+        else
+            if FlingEnabled.Angular then FlingEnabled.Angular:Destroy() end
+            if FlingEnabled.Velocity then FlingEnabled.Velocity:Destroy() end
+            if FlingEnabled.FlingConn then FlingEnabled.FlingConn:Disconnect() end
+            FlingEnabled = false
+            NoclipFlingEnabled = false
+            UpdateNoclip()
+        end
+    end
+)
+
+-- Slider Fling Speed (putaran)
+CreateSlider(MiscPage, "Fling Speed", 100, 2000, 500, function(val)
+    FlingSpeed = val
+    if type(FlingEnabled) == "table" and FlingEnabled.Angular then
+        FlingEnabled.Angular.AngularVelocity = Vector3.new(0, FlingSpeed, 0)
+    end
+end)
+
+-- Slider Fling Power (dorongan)
+CreateSlider(MiscPage, "Fling Power", 50, 1000, 100, function(val)
+    FlingPower = val
 end)
