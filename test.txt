@@ -13,7 +13,6 @@ local CustomWalkSpeed = 16
 local FlyEnabled = false
 local FlySpeed = 100
 local BodyGyro, BodyVelocity, FlyConn
-local Minimized = false
 
 -- Parent aman
 local ScreenGui = Instance.new("ScreenGui")
@@ -59,17 +58,6 @@ CloseBtn.MouseButton1Click:Connect(function()
     ScreenGui:Destroy()
 end)
 
--- Tombol Minimize (-)
-local MinBtn = Instance.new("TextButton", Frame)
-MinBtn.Size = UDim2.new(0, 30, 0, 30)
-MinBtn.Position = UDim2.new(1, -70, 0, 5)
-MinBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
-MinBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-MinBtn.Font = Enum.Font.SourceSansBold
-MinBtn.TextScaled = true
-MinBtn.Text = "-"
-MinBtn.ZIndex = 2
-
 -- Judul
 local Title = Instance.new("TextLabel", Frame)
 Title.Size = UDim2.new(1,0,0,40)
@@ -79,25 +67,19 @@ Title.Font = Enum.Font.SourceSansBold
 Title.TextScaled = true
 Title.TextColor3 = Color3.fromRGB(0,0,0)
 
--- === Konten Menu ===
-local Content = Instance.new("Frame", Frame)
-Content.Size = UDim2.new(1,0,1,-40)
-Content.Position = UDim2.new(0,0,0,40)
-Content.BackgroundTransparency = 1
-
 -- === WalkSpeed ===
-local WalkBtn = Instance.new("TextButton", Content)
+local WalkBtn = Instance.new("TextButton", Frame)
 WalkBtn.Size = UDim2.new(0,80,0,30)
-WalkBtn.Position = UDim2.new(0,10,0,20)
+WalkBtn.Position = UDim2.new(0,10,0,60)
 WalkBtn.Text = "OFF"
 WalkBtn.BackgroundColor3 = Color3.fromRGB(255,49,93)
 WalkBtn.TextColor3 = Color3.fromRGB(255,255,255)
 WalkBtn.Font = Enum.Font.SourceSansBold
 WalkBtn.TextScaled = true
 
-local WalkLabel = Instance.new("TextLabel", Content)
+local WalkLabel = Instance.new("TextLabel", Frame)
 WalkLabel.Size = UDim2.new(0,150,0,30)
-WalkLabel.Position = UDim2.new(0,100,0,20)
+WalkLabel.Position = UDim2.new(0,100,0,60)
 WalkLabel.BackgroundTransparency = 1
 WalkLabel.Text = "WalkSpeed"
 WalkLabel.TextColor3 = Color3.fromRGB(255,255,255)
@@ -105,37 +87,60 @@ WalkLabel.Font = Enum.Font.SourceSansBold
 WalkLabel.TextScaled = true
 
 -- Slider WalkSpeed
-local WalkSliderFrame = Instance.new("Frame", Content)
+local WalkSliderFrame = Instance.new("Frame", Frame)
 WalkSliderFrame.Size = UDim2.new(0,200,0,20)
-WalkSliderFrame.Position = UDim2.new(0,10,0,60)
+WalkSliderFrame.Position = UDim2.new(0,10,0,100)
 WalkSliderFrame.BackgroundColor3 = Color3.fromRGB(80,80,80)
 
 local WalkFill = Instance.new("Frame", WalkSliderFrame)
 WalkFill.Size = UDim2.new(CustomWalkSpeed/200,0,1,0)
 WalkFill.BackgroundColor3 = Color3.fromRGB(0,200,0)
 
-local WalkValue = Instance.new("TextLabel", Content)
+local WalkValue = Instance.new("TextLabel", Frame)
 WalkValue.Size = UDim2.new(0,100,0,20)
-WalkValue.Position = UDim2.new(0,220,0,60)
+WalkValue.Position = UDim2.new(0,220,0,100)
 WalkValue.BackgroundTransparency = 1
 WalkValue.Text = tostring(CustomWalkSpeed)
 WalkValue.TextColor3 = Color3.fromRGB(255,255,255)
 WalkValue.Font = Enum.Font.SourceSansBold
 WalkValue.TextScaled = true
 
+local draggingWalk = false
+WalkSliderFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        draggingWalk = true
+    end
+end)
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        draggingWalk = false
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if draggingWalk and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local relX = math.clamp((input.Position.X - WalkSliderFrame.AbsolutePosition.X) / WalkSliderFrame.AbsoluteSize.X, 0, 1)
+        CustomWalkSpeed = math.floor(relX * 200) -- max 200 speed
+        WalkFill.Size = UDim2.new(relX,0,1,0)
+        WalkValue.Text = tostring(CustomWalkSpeed)
+        if WalkSpeedEnabled then
+            Humanoid.WalkSpeed = CustomWalkSpeed
+        end
+    end
+end)
+
 -- === Fly ===
-local FlyBtn = Instance.new("TextButton", Content)
+local FlyBtn = Instance.new("TextButton", Frame)
 FlyBtn.Size = UDim2.new(0,80,0,30)
-FlyBtn.Position = UDim2.new(0,10,0,100)
+FlyBtn.Position = UDim2.new(0,10,0,140)
 FlyBtn.Text = "OFF"
 FlyBtn.BackgroundColor3 = Color3.fromRGB(255,49,93)
 FlyBtn.TextColor3 = Color3.fromRGB(255,255,255)
 FlyBtn.Font = Enum.Font.SourceSansBold
 FlyBtn.TextScaled = true
 
-local FlyLabel = Instance.new("TextLabel", Content)
+local FlyLabel = Instance.new("TextLabel", Frame)
 FlyLabel.Size = UDim2.new(0,150,0,30)
-FlyLabel.Position = UDim2.new(0,100,0,100)
+FlyLabel.Position = UDim2.new(0,100,0,140)
 FlyLabel.BackgroundTransparency = 1
 FlyLabel.Text = "Fly Player"
 FlyLabel.TextColor3 = Color3.fromRGB(255,255,255)
@@ -143,63 +148,41 @@ FlyLabel.Font = Enum.Font.SourceSansBold
 FlyLabel.TextScaled = true
 
 -- Slider FlySpeed
-local FlySliderFrame = Instance.new("Frame", Content)
+local FlySliderFrame = Instance.new("Frame", Frame)
 FlySliderFrame.Size = UDim2.new(0,200,0,20)
-FlySliderFrame.Position = UDim2.new(0,10,0,140)
+FlySliderFrame.Position = UDim2.new(0,10,0,180)
 FlySliderFrame.BackgroundColor3 = Color3.fromRGB(80,80,80)
 
 local FlyFill = Instance.new("Frame", FlySliderFrame)
-FlyFill.Size = UDim2.new(FlySpeed/300,0,1,0)
+FlyFill.Size = UDim2.new(FlySpeed/300,0,1,0) -- max 300
 FlyFill.BackgroundColor3 = Color3.fromRGB(0,200,255)
 
-local FlyValue = Instance.new("TextLabel", Content)
+local FlyValue = Instance.new("TextLabel", Frame)
 FlyValue.Size = UDim2.new(0,100,0,20)
-FlyValue.Position = UDim2.new(0,220,0,140)
+FlyValue.Position = UDim2.new(0,220,0,180)
 FlyValue.BackgroundTransparency = 1
 FlyValue.Text = tostring(FlySpeed)
 FlyValue.TextColor3 = Color3.fromRGB(255,255,255)
 FlyValue.Font = Enum.Font.SourceSansBold
 FlyValue.TextScaled = true
 
--- === Minimize Logic ===
-MinBtn.MouseButton1Click:Connect(function()
-    Minimized = not Minimized
-    if Minimized then
-        Content.Visible = false
-        Frame.Size = UDim2.new(0, 320, 0, 40)
-        MinBtn.Text = "+"
-    else
-        Content.Visible = true
-        Frame.Size = UDim2.new(0, 320, 0, 260)
-        MinBtn.Text = "-"
-    end
-end)
-
--- === Drag Title ===
-local dragging, dragInput, dragStart, startPos
-Title.InputBegan:Connect(function(input)
+local draggingFly = false
+FlySliderFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = true
-        dragStart = input.Position
-        startPos = Frame.Position
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-            end
-        end)
+        draggingFly = true
     end
 end)
-
-Title.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement then
-        dragInput = input
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        draggingFly = false
     end
 end)
-
 UserInputService.InputChanged:Connect(function(input)
-    if input == dragInput and dragging then
-        local delta = input.Position - dragStart
-        Frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    if draggingFly and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local relX = math.clamp((input.Position.X - FlySliderFrame.AbsolutePosition.X) / FlySliderFrame.AbsoluteSize.X, 0, 1)
+        FlySpeed = math.floor(relX * 300) -- max 300 speed
+        FlyFill.Size = UDim2.new(relX,0,1,0)
+        FlyValue.Text = tostring(FlySpeed)
     end
 end)
 
@@ -241,40 +224,6 @@ local function ToggleFly(state)
     end
 end
 
--- === Slider Logic ===
-local draggingWalk, draggingFly = false, false
-
-WalkSliderFrame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then draggingWalk = true end
-end)
-UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then draggingWalk = false end
-end)
-UserInputService.InputChanged:Connect(function(input)
-    if draggingWalk and input.UserInputType == Enum.UserInputType.MouseMovement then
-        local relX = math.clamp((input.Position.X - WalkSliderFrame.AbsolutePosition.X) / WalkSliderFrame.AbsoluteSize.X, 0, 1)
-        CustomWalkSpeed = math.floor(relX * 200)
-        WalkFill.Size = UDim2.new(relX,0,1,0)
-        WalkValue.Text = tostring(CustomWalkSpeed)
-        if WalkSpeedEnabled then Humanoid.WalkSpeed = CustomWalkSpeed end
-    end
-end)
-
-FlySliderFrame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then draggingFly = true end
-end)
-UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then draggingFly = false end
-end)
-UserInputService.InputChanged:Connect(function(input)
-    if draggingFly and input.UserInputType == Enum.UserInputType.MouseMovement then
-        local relX = math.clamp((input.Position.X - FlySliderFrame.AbsolutePosition.X) / FlySliderFrame.AbsoluteSize.X, 0, 1)
-        FlySpeed = math.floor(relX * 300)
-        FlyFill.Size = UDim2.new(relX,0,1,0)
-        FlyValue.Text = tostring(FlySpeed)
-    end
-end)
-
 -- === Button Logic ===
 WalkBtn.MouseButton1Click:Connect(function()
     WalkSpeedEnabled = not WalkSpeedEnabled
@@ -296,4 +245,35 @@ Player.CharacterAdded:Connect(function(c)
     Humanoid = c:WaitForChild("Humanoid")
     UpdateWalk()
     if FlyEnabled then ToggleFly(true) end
+end)
+
+-- === Dragging Frame via Title ===
+local dragging = false
+local dragStart, startPos
+
+local function updateDrag(input)
+    local delta = input.Position - dragStart
+    Frame.Position = UDim2.new(
+        startPos.X.Scale, startPos.X.Offset + delta.X,
+        startPos.Y.Scale, startPos.Y.Offset + delta.Y
+    )
+end
+
+Title.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = Frame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        updateDrag(input)
+    end
 end)
