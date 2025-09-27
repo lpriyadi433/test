@@ -15,11 +15,8 @@ local FlySpeed = 100
 local BodyGyro, BodyVelocity, FlyConn
 
 -- Misc vars
-local Boxed = false
-local FlingEnabled = false
-local FlingSpeed = 200
-local FlingConn
-local NoclipEnabled = false
+local InvisFlingEnabled = false
+local InvisFlingConnection
 
 -- Parent aman
 local ScreenGui = Instance.new("ScreenGui")
@@ -277,91 +274,64 @@ CreateSlider(MovementPage,"FlySpeed",0,300,100,function(val) FlySpeed = val end)
 
 -- Placeholder Tabs
 CreateTab("Visual")
-CreateTab("Misc")
+local MiscPage = CreateTab("Misc")
 
--- === Misc Tab Features ===
-local MiscPage = Tabs["Misc"].Page
+-- === Misc Tab ===
 local UIListMisc = Instance.new("UIListLayout", MiscPage)
 UIListMisc.Padding = UDim.new(0,10)
 UIListMisc.FillDirection = Enum.FillDirection.Vertical
 UIListMisc.HorizontalAlignment = Enum.HorizontalAlignment.Center
 UIListMisc.VerticalAlignment = Enum.VerticalAlignment.Top
 
--- Box Character toggle
-CreateToggleButton(MiscPage,"Box Character",
-    function() return Boxed end,
+-- InvisFling toggle
+CreateToggleButton(MiscPage,"InvisFling",
+    function() return InvisFlingEnabled end,
     function(state)
-        Boxed = state
-        if Boxed then
-            for _,part in pairs(Character:GetChildren()) do
-                if part:IsA("BasePart") then
-                    part.Transparency = 0.5
-                    part.Material = Enum.Material.Neon
-                    part.Size = Vector3.new(2,2,2)
-                    part.Anchored = false
-                end
-            end
-        else
-            for _,part in pairs(Character:GetChildren()) do
-                if part:IsA("BasePart") then
-                    part.Size = part.Name == "HumanoidRootPart" and Vector3.new(2,2,1) or Vector3.new(1,1,1)
-                    part.Material = Enum.Material.SmoothPlastic
-                    part.Transparency = 0
-                end
-            end
-        end
-    end
-)
+        InvisFlingEnabled = state
+        local HRP = Character:FindFirstChild("HumanoidRootPart")
+        if not HRP then return end
 
--- Fling toggle
-CreateToggleButton(MiscPage,"Fling",
-    function() return FlingEnabled end,
-    function(state)
-        FlingEnabled = state
-        local HRP = Character:WaitForChild("HumanoidRootPart")
-        local BodyGyroFling = Instance.new("BodyGyro", HRP)
-        local BodyVelocityFling = Instance.new("BodyVelocity", HRP)
-        BodyGyroFling.MaxTorque = Vector3.new(9e9,9e9,9e9)
-        BodyVelocityFling.MaxForce = Vector3.new(9e9,9e9,9e9)
-        BodyVelocityFling.Velocity = Vector3.new()
-        if FlingEnabled then
-            NoclipEnabled = true
-            FlingConn = RunService.Heartbeat:Connect(function()
-                BodyGyroFling.CFrame = BodyGyroFling.CFrame * CFrame.Angles(math.rad(1000),math.rad(1000),math.rad(1000))
-                local camCF = workspace.CurrentCamera.CFrame
-                local move = Vector3.new()
-                if UserInputService:IsKeyDown(Enum.KeyCode.W) then move += camCF.LookVector end
-                if UserInputService:IsKeyDown(Enum.KeyCode.S) then move -= camCF.LookVector end
-                if UserInputService:IsKeyDown(Enum.KeyCode.A) then move -= camCF.RightVector end
-                if UserInputService:IsKeyDown(Enum.KeyCode.D) then move += camCF.RightVector end
-                if UserInputService:IsKeyDown(Enum.KeyCode.Space) then move += Vector3.new(0,1,0) end
-                if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then move -= Vector3.new(0,1,0) end
-                BodyVelocityFling.Velocity = move.Magnitude > 0 and move.Unit * FlingSpeed or Vector3.new()
+        if InvisFlingEnabled then
+            -- Invisible
+            for _, part in pairs(Character:GetChildren()) do
+                if part:IsA("BasePart") then
+                    part.Transparency = 1
+                    for _, decal in pairs(part:GetChildren()) do
+                        if decal:IsA("Decal") then decal.Transparency = 1 end
+                    end
+                end
+            end
+
+            -- Fling
+            InvisFlingConnection = RunService.Heartbeat:Connect(function()
+                for _, other in pairs(Players:GetPlayers()) do
+                    if other ~= Player and other.Character and other.Character:FindFirstChild("HumanoidRootPart") then
+                        local targetHRP = other.Character.HumanoidRootPart
+                        local flingVelocity = Instance.new("BodyVelocity")
+                        flingVelocity.Velocity = (targetHRP.Position - HRP.Position).Unit * 100
+                        flingVelocity.MaxForce = Vector3.new(9e9,9e9,9e9)
+                        flingVelocity.Parent = HRP
+                        game:GetService("Debris"):AddItem(flingVelocity,0.1)
+                    end
+                end
             end)
         else
-            if FlingConn then FlingConn:Disconnect() end
-            BodyGyroFling:Destroy()
-            BodyVelocityFling:Destroy()
-            NoclipEnabled = false
-        end
-    end
-)
-
--- Fling speed slider
-CreateSlider(MiscPage,"Fling Speed",0,500,200,function(val)
-    FlingSpeed = val
-end)
-
--- Noclip loop
-RunService.Stepped:Connect(function()
-    if NoclipEnabled then
-        for _,part in pairs(Character:GetChildren()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = false
+            -- Reset
+            for _, part in pairs(Character:GetChildren()) do
+                if part:IsA("BasePart") then
+                    part.Transparency = 0
+                    for _, decal in pairs(part:GetChildren()) do
+                        if decal:IsA("Decal") then decal.Transparency = 0 end
+                    end
+                end
+            end
+            if InvisFlingConnection then
+                InvisFlingConnection:Disconnect()
+                InvisFlingConnection = nil
             end
         end
     end
-end)
+)
 
 -- Minimize
 local minimized = false
@@ -378,4 +348,5 @@ Player.CharacterAdded:Connect(function(c)
     Humanoid = c:WaitForChild("Humanoid")
     if WalkSpeedEnabled then Humanoid.WalkSpeed = CustomWalkSpeed end
     if FlyEnabled then FlyEnabled = false end
+    if InvisFlingEnabled then InvisFlingEnabled = false end
 end)
