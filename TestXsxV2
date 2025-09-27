@@ -283,7 +283,7 @@ UIListMisc.FillDirection = Enum.FillDirection.Vertical
 UIListMisc.HorizontalAlignment = Enum.HorizontalAlignment.Center
 UIListMisc.VerticalAlignment = Enum.VerticalAlignment.Top
 
--- SpinFling toggle
+-- SpinFling toggle (fast & proximity)
 CreateToggleButton(MiscPage,"SpinFling",
     function() return SpinFlingEnabled end,
     function(state)
@@ -293,14 +293,17 @@ CreateToggleButton(MiscPage,"SpinFling",
 
         if SpinFlingEnabled then
             SpinFlingConnection = RunService.Heartbeat:Connect(function()
-                -- Putar karakter
-                HRP.CFrame = HRP.CFrame * CFrame.Angles(0, math.rad(30), 0)
-                -- Dorong player lain
                 for _, other in pairs(Players:GetPlayers()) do
                     if other ~= Player and other.Character and other.Character:FindFirstChild("HumanoidRootPart") then
                         local targetHRP = other.Character.HumanoidRootPart
-                        local direction = (targetHRP.Position - HRP.Position).Unit
-                        targetHRP.Velocity = direction * 100
+                        local distance = (targetHRP.Position - HRP.Position).Magnitude
+                        if distance <= 5 then -- hanya jika dekat / menyentuh
+                            -- Putar karakter sangat cepat
+                            HRP.CFrame = HRP.CFrame * CFrame.Angles(0, math.rad(360), 0)
+                            -- Dorong player lain
+                            local direction = (targetHRP.Position - HRP.Position).Unit
+                            targetHRP.Velocity = direction * 2000
+                        end
                     end
                 end
             end)
