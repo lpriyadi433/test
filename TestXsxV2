@@ -14,6 +14,11 @@ local FlyEnabled = false
 local FlySpeed = 100
 local BodyGyro, BodyVelocity, FlyConn
 
+-- Fling vars
+local FlingEnabled = false
+local FlingSpeed = 5000
+local FlingGyro, FlingConn
+
 -- Parent aman
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "XSXMovementUI"
@@ -268,7 +273,7 @@ CreateToggleButton(MovementPage,"Fly",
 
 CreateSlider(MovementPage,"FlySpeed",0,300,100,function(val) FlySpeed = val end)
 
--- Placeholder Tabs
+-- === Placeholder Tabs ===
 CreateTab("Visual")
 CreateTab("Misc")
 
@@ -280,45 +285,33 @@ UIListMisc.FillDirection = Enum.FillDirection.Vertical
 UIListMisc.HorizontalAlignment = Enum.HorizontalAlignment.Center
 UIListMisc.VerticalAlignment = Enum.VerticalAlignment.Top
 
--- Invisible Fling toggle
-local InvisibleFlingEnabled = false
-CreateToggleButton(MiscPage, "Invisible Fling",
-    function() return InvisibleFlingEnabled end,
+-- Fling toggle
+CreateToggleButton(MiscPage,"Fling",
+    function() return FlingEnabled end,
     function(state)
-        InvisibleFlingEnabled = state
+        FlingEnabled = state
+        local HRP = Character:WaitForChild("HumanoidRootPart")
+        if FlingEnabled then
+            FlingGyro = Instance.new("BodyAngularVelocity", HRP)
+            FlingGyro.MaxTorque = Vector3.new(9e9,9e9,9e9)
+            FlingGyro.AngularVelocity = Vector3.new(FlingSpeed,FlingSpeed,FlingSpeed)
+
+            FlingConn = RunService.RenderStepped:Connect(function()
+                if not FlingEnabled then return end
+                FlingGyro.AngularVelocity = Vector3.new(FlingSpeed,FlingSpeed,FlingSpeed)
+            end)
+        else
+            if FlingConn then FlingConn:Disconnect() end
+            if FlingGyro then FlingGyro:Destroy() end
+        end
     end
 )
 
--- Table untuk cooldown fling tiap pemain
-local flingCooldowns = {}
-
--- Function fling yang stabil
-local function flingOtherPlayerStable(otherChar)
-    local hrp = otherChar:FindFirstChild("HumanoidRootPart")
-    if hrp then
-        local playerId = otherChar.Name
-        if flingCooldowns[playerId] then return end -- skip jika masih cooldown
-
-        flingCooldowns[playerId] = true
-        local bv = Instance.new("BodyVelocity")
-        bv.MaxForce = Vector3.new(1e5,1e5,1e5)
-        bv.Velocity = (hrp.Position - Character.HumanoidRootPart.Position).Unit * 200
-        bv.Parent = hrp
-        game.Debris:AddItem(bv, 0.2) -- hilang setelah 0.2 detik
-
-        -- Hapus cooldown setelah 0.3 detik
-        delay(0.3, function()
-            flingCooldowns[playerId] = nil
-        end)
-    end
-end
-
--- Connect Touched event yang stabil
-Character:WaitForChild("HumanoidRootPart").Touched:Connect(function(hit)
-    if not InvisibleFlingEnabled then return end
-    local otherPlayer = Players:GetPlayerFromCharacter(hit.Parent)
-    if otherPlayer and otherPlayer ~= Player then
-        flingOtherPlayerStable(hit.Parent)
+-- Fling speed slider
+CreateSlider(MiscPage,"Fling Speed",1000,20000,5000,function(val)
+    FlingSpeed = val
+    if FlingGyro then
+        FlingGyro.AngularVelocity = Vector3.new(FlingSpeed,FlingSpeed,FlingSpeed)
     end
 end)
 
