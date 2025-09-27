@@ -1,0 +1,352 @@
+-- Movement Menu Modern (Style xsx Lib)
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+local Player = Players.LocalPlayer
+local Character = Player.Character or Player.CharacterAdded:Wait()
+local Humanoid = Character:WaitForChild("Humanoid")
+
+-- Vars
+local WalkSpeedEnabled = false
+local CustomWalkSpeed = 16
+local FlyEnabled = false
+local FlySpeed = 100
+local BodyGyro, BodyVelocity, FlyConn
+
+-- Parent aman
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "MovementMenu"
+ScreenGui.ResetOnSpawn = false
+if gethui then
+    ScreenGui.Parent = gethui()
+elseif syn and syn.protect_gui then
+    syn.protect_gui(ScreenGui)
+    ScreenGui.Parent = game.CoreGui
+else
+    ScreenGui.Parent = Player:WaitForChild("PlayerGui")
+end
+
+-- ===== FRAME UTAMA =====
+local Frame = Instance.new("Frame", ScreenGui)
+Frame.Size = UDim2.new(0, 340, 0, 280)
+Frame.Position = UDim2.new(0.05, 0, 0.2, 0)
+Frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
+Frame.BorderSizePixel = 0
+Frame.ClipsDescendants = true
+
+local UICorner = Instance.new("UICorner", Frame)
+UICorner.CornerRadius = UDim.new(0, 12)
+
+-- Gradient ala xsx
+local UIGradient = Instance.new("UIGradient", Frame)
+UIGradient.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(35,35,35)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(15,15,15))
+}
+UIGradient.Rotation = 90
+
+-- Stroke outline
+local UIStroke = Instance.new("UIStroke", Frame)
+UIStroke.Thickness = 2
+UIStroke.Color = Color3.fromRGB(60,60,60)
+
+-- Title
+local Title = Instance.new("TextLabel", Frame)
+Title.Size = UDim2.new(1, -60, 0, 40)
+Title.Position = UDim2.new(0, 15, 0, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "⚡ Movement Menu"
+Title.Font = Enum.Font.GothamBold
+Title.TextScaled = true
+Title.TextColor3 = Color3.fromRGB(255,255,255)
+Title.TextXAlignment = Enum.TextXAlignment.Left
+
+-- Tombol Close
+local CloseBtn = Instance.new("TextButton", Frame)
+CloseBtn.Size = UDim2.new(0, 30, 0, 30)
+CloseBtn.Position = UDim2.new(1, -40, 0, 5)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
+CloseBtn.Text = "✕"
+CloseBtn.TextColor3 = Color3.fromRGB(255,255,255)
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.TextScaled = true
+local UICornerClose = Instance.new("UICorner", CloseBtn)
+UICornerClose.CornerRadius = UDim.new(0,6)
+
+CloseBtn.MouseButton1Click:Connect(function()
+    WalkSpeedEnabled = false
+    Humanoid.WalkSpeed = 16
+    if FlyEnabled then
+        FlyEnabled = false
+        if FlyConn then FlyConn:Disconnect() end
+        if BodyVelocity then BodyVelocity:Destroy() end
+        if BodyGyro then BodyGyro:Destroy() end
+        Humanoid.PlatformStand = false
+    end
+    ScreenGui:Destroy()
+end)
+
+-- Tombol Minimize
+local MinimizeBtn = Instance.new("TextButton", Frame)
+MinimizeBtn.Size = UDim2.new(0, 30, 0, 30)
+MinimizeBtn.Position = UDim2.new(0, 5, 0, 5)
+MinimizeBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+MinimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+MinimizeBtn.Font = Enum.Font.GothamBold
+MinimizeBtn.TextScaled = true
+MinimizeBtn.Text = "—"
+local UICornerMini = Instance.new("UICorner", MinimizeBtn)
+UICornerMini.CornerRadius = UDim.new(0,6)
+
+local minimized = false
+MinimizeBtn.MouseButton1Click:Connect(function()
+    minimized = not minimized
+    if minimized then
+        for _, obj in ipairs(Frame:GetChildren()) do
+            if obj ~= Title and obj ~= MinimizeBtn and obj ~= CloseBtn and not obj:IsA("UIGradient") and not obj:IsA("UICorner") and not obj:IsA("UIStroke") then
+                obj.Visible = false
+            end
+        end
+        Frame.Size = UDim2.new(0, 340, 0, 40)
+        MinimizeBtn.Text = "+"
+    else
+        for _, obj in ipairs(Frame:GetChildren()) do
+            obj.Visible = true
+        end
+        Frame.Size = UDim2.new(0, 340, 0, 280)
+        MinimizeBtn.Text = "—"
+    end
+end)
+
+-- === TEMPLATE BUTTON ===
+local function createButton(text, posY, color)
+    local Btn = Instance.new("TextButton", Frame)
+    Btn.Size = UDim2.new(0,100,0,35)
+    Btn.Position = UDim2.new(0,15,0,posY)
+    Btn.BackgroundColor3 = color
+    Btn.TextColor3 = Color3.fromRGB(255,255,255)
+    Btn.Font = Enum.Font.GothamBold
+    Btn.TextScaled = true
+    Btn.Text = text
+    local corner = Instance.new("UICorner", Btn)
+    corner.CornerRadius = UDim.new(0,8)
+    return Btn
+end
+
+-- === WalkSpeed ===
+local WalkBtn = createButton("OFF", 60, Color3.fromRGB(255,60,90))
+
+local WalkLabel = Instance.new("TextLabel", Frame)
+WalkLabel.Size = UDim2.new(0,150,0,30)
+WalkLabel.Position = UDim2.new(0,130,0,60)
+WalkLabel.BackgroundTransparency = 1
+WalkLabel.Text = "WalkSpeed"
+WalkLabel.TextColor3 = Color3.fromRGB(255,255,255)
+WalkLabel.Font = Enum.Font.GothamBold
+WalkLabel.TextScaled = true
+
+-- Slider WalkSpeed
+local WalkSliderFrame = Instance.new("Frame", Frame)
+WalkSliderFrame.Size = UDim2.new(0,220,0,20)
+WalkSliderFrame.Position = UDim2.new(0,15,0,100)
+WalkSliderFrame.BackgroundColor3 = Color3.fromRGB(50,50,50)
+local WCorner = Instance.new("UICorner", WalkSliderFrame)
+WCorner.CornerRadius = UDim.new(0,6)
+
+local WalkFill = Instance.new("Frame", WalkSliderFrame)
+WalkFill.Size = UDim2.new(CustomWalkSpeed/200,0,1,0)
+WalkFill.BackgroundColor3 = Color3.fromRGB(0,200,100)
+local WFcorner = Instance.new("UICorner", WalkFill)
+WFcorner.CornerRadius = UDim.new(0,6)
+
+local WalkValue = Instance.new("TextLabel", Frame)
+WalkValue.Size = UDim2.new(0,80,0,20)
+WalkValue.Position = UDim2.new(0,245,0,100)
+WalkValue.BackgroundTransparency = 1
+WalkValue.Text = tostring(CustomWalkSpeed)
+WalkValue.TextColor3 = Color3.fromRGB(255,255,255)
+WalkValue.Font = Enum.Font.GothamBold
+WalkValue.TextScaled = true
+
+-- === Fly ===
+local FlyBtn = createButton("OFF", 150, Color3.fromRGB(255,60,90))
+
+local FlyLabel = Instance.new("TextLabel", Frame)
+FlyLabel.Size = UDim2.new(0,150,0,30)
+FlyLabel.Position = UDim2.new(0,130,0,150)
+FlyLabel.BackgroundTransparency = 1
+FlyLabel.Text = "Fly Player"
+FlyLabel.TextColor3 = Color3.fromRGB(255,255,255)
+FlyLabel.Font = Enum.Font.GothamBold
+FlyLabel.TextScaled = true
+
+-- Slider FlySpeed
+local FlySliderFrame = Instance.new("Frame", Frame)
+FlySliderFrame.Size = UDim2.new(0,220,0,20)
+FlySliderFrame.Position = UDim2.new(0,15,0,190)
+FlySliderFrame.BackgroundColor3 = Color3.fromRGB(50,50,50)
+local FCorner = Instance.new("UICorner", FlySliderFrame)
+FCorner.CornerRadius = UDim.new(0,6)
+
+local FlyFill = Instance.new("Frame", FlySliderFrame)
+FlyFill.Size = UDim2.new(FlySpeed/300,0,1,0)
+FlyFill.BackgroundColor3 = Color3.fromRGB(0,180,255)
+local FFcorner = Instance.new("UICorner", FlyFill)
+FFcorner.CornerRadius = UDim.new(0,6)
+
+local FlyValue = Instance.new("TextLabel", Frame)
+FlyValue.Size = UDim2.new(0,80,0,20)
+FlyValue.Position = UDim2.new(0,245,0,190)
+FlyValue.BackgroundTransparency = 1
+FlyValue.Text = tostring(FlySpeed)
+FlyValue.TextColor3 = Color3.fromRGB(255,255,255)
+FlyValue.Font = Enum.Font.GothamBold
+FlyValue.TextScaled = true
+
+-- === Slider Logic ===
+local draggingWalk = false
+WalkSliderFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        draggingWalk = true
+    end
+end)
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        draggingWalk = false
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if draggingWalk and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local relX = math.clamp((input.Position.X - WalkSliderFrame.AbsolutePosition.X) / WalkSliderFrame.AbsoluteSize.X, 0, 1)
+        CustomWalkSpeed = math.floor(relX * 200)
+        WalkFill.Size = UDim2.new(relX,0,1,0)
+        WalkValue.Text = tostring(CustomWalkSpeed)
+        if WalkSpeedEnabled then
+            Humanoid.WalkSpeed = CustomWalkSpeed
+        end
+    end
+end)
+
+local draggingFly = false
+FlySliderFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        draggingFly = true
+    end
+end)
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        draggingFly = false
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if draggingFly and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local relX = math.clamp((input.Position.X - FlySliderFrame.AbsolutePosition.X) / FlySliderFrame.AbsoluteSize.X, 0, 1)
+        FlySpeed = math.floor(relX * 300)
+        FlyFill.Size = UDim2.new(relX,0,1,0)
+        FlyValue.Text = tostring(FlySpeed)
+    end
+end)
+
+-- === Functions ===
+local function UpdateWalk()
+    if WalkSpeedEnabled then
+        Humanoid.WalkSpeed = CustomWalkSpeed
+    else
+        Humanoid.WalkSpeed = 16
+    end
+end
+
+local function ToggleFly(state)
+    FlyEnabled = state
+    if FlyEnabled then
+        local HRP = Character:WaitForChild("HumanoidRootPart")
+        Humanoid.PlatformStand = true
+        BodyGyro = Instance.new("BodyGyro", HRP)
+        BodyGyro.MaxTorque = Vector3.new(9e9,9e9,9e9)
+        BodyVelocity = Instance.new("BodyVelocity", HRP)
+        BodyVelocity.MaxForce = Vector3.new(9e9,9e9,9e9)
+        FlyConn = RunService.RenderStepped:Connect(function()
+            local camCF = workspace.CurrentCamera.CFrame
+            local move = Vector3.new()
+            if UserInputService:IsKeyDown(Enum.KeyCode.W) then move += camCF.LookVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.S) then move -= camCF.LookVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.A) then move -= camCF.RightVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.D) then move += camCF.RightVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then move += Vector3.new(0,1,0) end
+            if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then move -= Vector3.new(0,1,0) end
+            BodyVelocity.Velocity = move.Magnitude > 0 and move.Unit * FlySpeed or Vector3.new()
+            BodyGyro.CFrame = camCF
+        end)
+    else
+        if FlyConn then FlyConn:Disconnect() end
+        if BodyVelocity then BodyVelocity:Destroy() end
+        if BodyGyro then BodyGyro:Destroy() end
+        Humanoid.PlatformStand = false
+    end
+end
+
+-- === Button Logic ===
+WalkBtn.MouseButton1Click:Connect(function()
+    WalkSpeedEnabled = not WalkSpeedEnabled
+    WalkBtn.Text = WalkSpeedEnabled and "ON" or "OFF"
+    WalkBtn.BackgroundColor3 = WalkSpeedEnabled and Color3.fromRGB(0,200,100) or Color3.fromRGB(255,60,90)
+    UpdateWalk()
+end)
+
+FlyBtn.MouseButton1Click:Connect(function()
+    FlyEnabled = not FlyEnabled
+    FlyBtn.Text = FlyEnabled and "ON" or "OFF"
+    FlyBtn.BackgroundColor3 = FlyEnabled and Color3.fromRGB(0,180,255) or Color3.fromRGB(255,60,90)
+    ToggleFly(FlyEnabled)
+end)
+
+-- Respawn fix
+Player.CharacterAdded:Connect(function(c)
+    Character = c
+    Humanoid = c:WaitForChild("Humanoid")
+    UpdateWalk()
+    if FlyEnabled then ToggleFly(true) end
+end)
+
+-- === Dragging Frame via Title ===
+local dragging = false
+local dragStart, startPos
+
+local function updateDrag(input)
+    local delta = input.Position - dragStart
+    Frame.Position = UDim2.new(
+        startPos.X.Scale, startPos.X.Offset + delta.X,
+        startPos.Y.Scale, startPos.Y.Offset + delta.Y
+    )
+end
+
+Title.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = Frame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        updateDrag(input)
+    end
+end)
+
+-- Watermark ala xsx
+local Watermark = Instance.new("TextLabel", ScreenGui)
+Watermark.Size = UDim2.new(0,200,0,25)
+Watermark.Position = UDim2.new(0,20,1,-40)
+Watermark.BackgroundTransparency = 1
+Watermark.Text = "Made with xsx-style UI"
+Watermark.TextColor3 = Color3.fromRGB(180,180,180)
+Watermark.Font = Enum.Font.Gotham
+Watermark.TextScaled = true
+Watermark.TextXAlignment = Enum.TextXAlignment.Left
