@@ -1,197 +1,213 @@
---// Variables
-local Player = game.Players.LocalPlayer
-local UserInputService = game:GetService("UserInputService")
+-- Movement Menu Sederhana (Tanpa Rayfield)
+local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 
+local Player = Players.LocalPlayer
 local Character = Player.Character or Player.CharacterAdded:Wait()
 local Humanoid = Character:WaitForChild("Humanoid")
 
+-- Vars
 local WalkSpeedEnabled = false
 local CustomWalkSpeed = 16
 local FlyEnabled = false
 local FlySpeed = 100
-
---// Functions
-local function UpdateWalkSpeed()
-	if WalkSpeedEnabled then
-		Humanoid.WalkSpeed = CustomWalkSpeed
-	else
-		Humanoid.WalkSpeed = 16
-	end
-end
-
--- Fly system
 local BodyGyro, BodyVelocity, FlyConn
-local function ToggleFly(state)
-	FlyEnabled = state
-	if FlyEnabled then
-		local HRP = Character:WaitForChild("HumanoidRootPart")
-		Humanoid.PlatformStand = true
 
-		BodyGyro = Instance.new("BodyGyro")
-		BodyGyro.P = 9e4
-		BodyGyro.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
-		BodyGyro.CFrame = HRP.CFrame
-		BodyGyro.Parent = HRP
-
-		BodyVelocity = Instance.new("BodyVelocity")
-		BodyVelocity.Velocity = Vector3.zero
-		BodyVelocity.MaxForce = Vector3.new(9e9, 9e9, 9e9)
-		BodyVelocity.Parent = HRP
-
-		FlyConn = RunService.RenderStepped:Connect(function()
-			if FlyEnabled and HRP then
-				local camCF = workspace.CurrentCamera.CFrame
-				local moveDir = Vector3.zero
-
-				if UserInputService:IsKeyDown(Enum.KeyCode.W) then
-					moveDir += camCF.LookVector
-				end
-				if UserInputService:IsKeyDown(Enum.KeyCode.S) then
-					moveDir -= camCF.LookVector
-				end
-				if UserInputService:IsKeyDown(Enum.KeyCode.A) then
-					moveDir -= camCF.RightVector
-				end
-				if UserInputService:IsKeyDown(Enum.KeyCode.D) then
-					moveDir += camCF.RightVector
-				end
-				if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
-					moveDir += Vector3.new(0,1,0)
-				end
-				if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
-					moveDir -= Vector3.new(0,1,0)
-				end
-
-				if moveDir.Magnitude > 0 then
-					BodyVelocity.Velocity = moveDir.Unit * FlySpeed
-				else
-					BodyVelocity.Velocity = Vector3.zero
-				end
-
-				BodyGyro.CFrame = camCF
-			end
-		end)
-	else
-		if FlyConn then FlyConn:Disconnect() FlyConn = nil end
-		if BodyVelocity then BodyVelocity:Destroy() BodyVelocity = nil end
-		if BodyGyro then BodyGyro:Destroy() BodyGyro = nil end
-		Humanoid.PlatformStand = false
-	end
+-- Parent aman
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "MovementMenu"
+ScreenGui.ResetOnSpawn = false
+if gethui then
+    ScreenGui.Parent = gethui()
+elseif syn and syn.protect_gui then
+    syn.protect_gui(ScreenGui)
+    ScreenGui.Parent = game.CoreGui
+else
+    ScreenGui.Parent = Player:WaitForChild("PlayerGui")
 end
 
---// UI
-local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
-ScreenGui.Name = "MovementMenu"
-
+-- Frame utama
 local Frame = Instance.new("Frame", ScreenGui)
-Frame.Size = UDim2.new(0, 300, 0, 200)
+Frame.Size = UDim2.new(0, 320, 0, 220)
 Frame.Position = UDim2.new(0.05, 0, 0.2, 0)
-Frame.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+Frame.BackgroundColor3 = Color3.fromRGB(45,45,45)
 Frame.BorderSizePixel = 0
 
--- Title
-local Title = Instance.new("TextLabel", Frame)
-Title.Size = UDim2.new(1, 0, 0, 40)
-Title.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-Title.Text = "MENU PLAYER"
-Title.TextScaled = true
-Title.Font = Enum.Font.SourceSansBold
-Title.TextColor3 = Color3.fromRGB(0, 0, 0)
+-- Tombol Close (X)
+local CloseBtn = Instance.new("TextButton", Frame)
+CloseBtn.Size = UDim2.new(0, 30, 0, 30)
+CloseBtn.Position = UDim2.new(1, -35, 0, 5)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseBtn.Font = Enum.Font.SourceSansBold
+CloseBtn.TextScaled = true
+CloseBtn.Text = "X"
+CloseBtn.ZIndex = 2
+CloseBtn.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()
+end)
 
--- WalkSpeed Toggle
-local WalkToggle = Instance.new("TextButton", Frame)
-WalkToggle.Position = UDim2.new(0, 10, 0, 50)
-WalkToggle.Size = UDim2.new(0, 80, 0, 30)
-WalkToggle.Text = "OFF"
-WalkToggle.BackgroundColor3 = Color3.fromRGB(255, 0, 64)
-WalkToggle.TextColor3 = Color3.fromRGB(255,255,255)
+-- Judul
+local Title = Instance.new("TextLabel", Frame)
+Title.Size = UDim2.new(1,0,0,40)
+Title.BackgroundColor3 = Color3.fromRGB(255,255,255)
+Title.Text = "MENU PLAYER"
+Title.Font = Enum.Font.SourceSansBold
+Title.TextScaled = true
+Title.TextColor3 = Color3.fromRGB(0,0,0)
+
+-- === WalkSpeed ===
+local WalkBtn = Instance.new("TextButton", Frame)
+WalkBtn.Size = UDim2.new(0,80,0,30)
+WalkBtn.Position = UDim2.new(0,10,0,60)
+WalkBtn.Text = "OFF"
+WalkBtn.BackgroundColor3 = Color3.fromRGB(255,49,93)
+WalkBtn.TextColor3 = Color3.fromRGB(255,255,255)
+WalkBtn.Font = Enum.Font.SourceSansBold
+WalkBtn.TextScaled = true
 
 local WalkLabel = Instance.new("TextLabel", Frame)
-WalkLabel.Position = UDim2.new(0, 100, 0, 50)
-WalkLabel.Size = UDim2.new(0, 150, 0, 30)
+WalkLabel.Size = UDim2.new(0,150,0,30)
+WalkLabel.Position = UDim2.new(0,100,0,60)
+WalkLabel.BackgroundTransparency = 1
 WalkLabel.Text = "WalkSpeed"
 WalkLabel.TextColor3 = Color3.fromRGB(255,255,255)
-WalkLabel.BackgroundTransparency = 1
 WalkLabel.Font = Enum.Font.SourceSansBold
 WalkLabel.TextScaled = true
 
--- WalkSpeed Box
-local WalkBox = Instance.new("TextBox", Frame)
-WalkBox.Position = UDim2.new(0, 10, 0, 90)
-WalkBox.Size = UDim2.new(0, 80, 0, 30)
-WalkBox.Text = tostring(CustomWalkSpeed)
-WalkBox.BackgroundColor3 = Color3.fromRGB(255,255,255)
-WalkBox.TextColor3 = Color3.fromRGB(0,0,0)
+-- Slider WalkSpeed
+local WalkSliderFrame = Instance.new("Frame", Frame)
+WalkSliderFrame.Size = UDim2.new(0,200,0,20)
+WalkSliderFrame.Position = UDim2.new(0,10,0,100)
+WalkSliderFrame.BackgroundColor3 = Color3.fromRGB(80,80,80)
 
--- Fly Toggle
-local FlyToggle = Instance.new("TextButton", Frame)
-FlyToggle.Position = UDim2.new(0, 10, 0, 130)
-FlyToggle.Size = UDim2.new(0, 80, 0, 30)
-FlyToggle.Text = "OFF"
-FlyToggle.BackgroundColor3 = Color3.fromRGB(255, 0, 64)
-FlyToggle.TextColor3 = Color3.fromRGB(255,255,255)
+local WalkFill = Instance.new("Frame", WalkSliderFrame)
+WalkFill.Size = UDim2.new(CustomWalkSpeed/200,0,1,0)
+WalkFill.BackgroundColor3 = Color3.fromRGB(0,200,0)
+
+local WalkValue = Instance.new("TextLabel", Frame)
+WalkValue.Size = UDim2.new(0,100,0,20)
+WalkValue.Position = UDim2.new(0,220,0,100)
+WalkValue.BackgroundTransparency = 1
+WalkValue.Text = tostring(CustomWalkSpeed)
+WalkValue.TextColor3 = Color3.fromRGB(255,255,255)
+WalkValue.Font = Enum.Font.SourceSansBold
+WalkValue.TextScaled = true
+
+local dragging = false
+WalkSliderFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+    end
+end)
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = false
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local relX = math.clamp((input.Position.X - WalkSliderFrame.AbsolutePosition.X) / WalkSliderFrame.AbsoluteSize.X, 0, 1)
+        CustomWalkSpeed = math.floor(relX * 200) -- max 200 speed
+        WalkFill.Size = UDim2.new(relX,0,1,0)
+        WalkValue.Text = tostring(CustomWalkSpeed)
+        if WalkSpeedEnabled then
+            Humanoid.WalkSpeed = CustomWalkSpeed
+        end
+    end
+end)
+
+-- === Fly ===
+local FlyBtn = Instance.new("TextButton", Frame)
+FlyBtn.Size = UDim2.new(0,80,0,30)
+FlyBtn.Position = UDim2.new(0,10,0,140)
+FlyBtn.Text = "OFF"
+FlyBtn.BackgroundColor3 = Color3.fromRGB(255,49,93)
+FlyBtn.TextColor3 = Color3.fromRGB(255,255,255)
+FlyBtn.Font = Enum.Font.SourceSansBold
+FlyBtn.TextScaled = true
 
 local FlyLabel = Instance.new("TextLabel", Frame)
-FlyLabel.Position = UDim2.new(0, 100, 0, 130)
-FlyLabel.Size = UDim2.new(0, 150, 0, 30)
+FlyLabel.Size = UDim2.new(0,150,0,30)
+FlyLabel.Position = UDim2.new(0,100,0,140)
+FlyLabel.BackgroundTransparency = 1
 FlyLabel.Text = "Fly Player"
 FlyLabel.TextColor3 = Color3.fromRGB(255,255,255)
-FlyLabel.BackgroundTransparency = 1
 FlyLabel.Font = Enum.Font.SourceSansBold
 FlyLabel.TextScaled = true
 
--- FlySpeed Box
 local FlyBox = Instance.new("TextBox", Frame)
-FlyBox.Position = UDim2.new(0, 10, 0, 170)
-FlyBox.Size = UDim2.new(0, 80, 0, 30)
+FlyBox.Size = UDim2.new(0,100,0,30)
+FlyBox.Position = UDim2.new(0,10,0,180)
 FlyBox.Text = tostring(FlySpeed)
 FlyBox.BackgroundColor3 = Color3.fromRGB(255,255,255)
 FlyBox.TextColor3 = Color3.fromRGB(0,0,0)
+FlyBox.Font = Enum.Font.SourceSansBold
+FlyBox.TextScaled = true
 
---// Button Functions
-WalkToggle.MouseButton1Click:Connect(function()
-	WalkSpeedEnabled = not WalkSpeedEnabled
-	if WalkSpeedEnabled then
-		WalkToggle.Text = "ON"
-		WalkToggle.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
-	else
-		WalkToggle.Text = "OFF"
-		WalkToggle.BackgroundColor3 = Color3.fromRGB(255, 0, 64)
-	end
-	UpdateWalkSpeed()
+-- === Functions ===
+local function UpdateWalk()
+    if WalkSpeedEnabled then
+        Humanoid.WalkSpeed = CustomWalkSpeed
+    else
+        Humanoid.WalkSpeed = 16
+    end
+end
+
+local function ToggleFly(state)
+    FlyEnabled = state
+    if FlyEnabled then
+        local HRP = Character:WaitForChild("HumanoidRootPart")
+        Humanoid.PlatformStand = true
+        BodyGyro = Instance.new("BodyGyro", HRP)
+        BodyGyro.MaxTorque = Vector3.new(9e9,9e9,9e9)
+        BodyVelocity = Instance.new("BodyVelocity", HRP)
+        BodyVelocity.MaxForce = Vector3.new(9e9,9e9,9e9)
+        FlyConn = RunService.RenderStepped:Connect(function()
+            local camCF = workspace.CurrentCamera.CFrame
+            local move = Vector3.new()
+            if UserInputService:IsKeyDown(Enum.KeyCode.W) then move += camCF.LookVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.S) then move -= camCF.LookVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.A) then move -= camCF.RightVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.D) then move += camCF.RightVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then move += Vector3.new(0,1,0) end
+            if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then move -= Vector3.new(0,1,0) end
+            BodyVelocity.Velocity = move.Magnitude > 0 and move.Unit * FlySpeed or Vector3.new()
+            BodyGyro.CFrame = camCF
+        end)
+    else
+        if FlyConn then FlyConn:Disconnect() end
+        if BodyVelocity then BodyVelocity:Destroy() end
+        if BodyGyro then BodyGyro:Destroy() end
+        Humanoid.PlatformStand = false
+    end
+end
+
+-- === Button Logic ===
+WalkBtn.MouseButton1Click:Connect(function()
+    WalkSpeedEnabled = not WalkSpeedEnabled
+    WalkBtn.Text = WalkSpeedEnabled and "ON" or "OFF"
+    WalkBtn.BackgroundColor3 = WalkSpeedEnabled and Color3.fromRGB(0,200,0) or Color3.fromRGB(255,49,93)
+    UpdateWalk()
 end)
 
-FlyToggle.MouseButton1Click:Connect(function()
-	FlyEnabled = not FlyEnabled
-	if FlyEnabled then
-		FlyToggle.Text = "ON"
-		FlyToggle.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
-	else
-		FlyToggle.Text = "OFF"
-		FlyToggle.BackgroundColor3 = Color3.fromRGB(255, 0, 64)
-	end
-	ToggleFly(FlyEnabled)
-end)
-
-WalkBox.FocusLost:Connect(function()
-	local val = tonumber(WalkBox.Text)
-	if val then
-		CustomWalkSpeed = val
-		UpdateWalkSpeed()
-	end
+FlyBtn.MouseButton1Click:Connect(function()
+    FlyEnabled = not FlyEnabled
+    FlyBtn.Text = FlyEnabled and "ON" or "OFF"
+    FlyBtn.BackgroundColor3 = FlyEnabled and Color3.fromRGB(0,200,0) or Color3.fromRGB(255,49,93)
+    ToggleFly(FlyEnabled)
 end)
 
 FlyBox.FocusLost:Connect(function()
-	local val = tonumber(FlyBox.Text)
-	if val then
-		FlySpeed = val
-	end
+    local v = tonumber(FlyBox.Text)
+    if v then FlySpeed = v end
 end)
 
 -- Respawn fix
-Player.CharacterAdded:Connect(function(char)
-	Character = char
-	Humanoid = char:WaitForChild("Humanoid")
-	UpdateWalkSpeed()
+Player.CharacterAdded:Connect(function(c)
+    Character = c
+    Humanoid = c:WaitForChild("Humanoid")
+    UpdateWalk()
+    if FlyEnabled then ToggleFly(true) end
 end)
