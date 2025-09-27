@@ -34,15 +34,6 @@ Frame.Position = UDim2.new(0.05, 0, 0.2, 0)
 Frame.BackgroundColor3 = Color3.fromRGB(45,45,45)
 Frame.BorderSizePixel = 0
 
--- Judul
-local Title = Instance.new("TextLabel", Frame)
-Title.Size = UDim2.new(1,0,0,40)
-Title.BackgroundColor3 = Color3.fromRGB(255,255,255)
-Title.Text = "MENU PLAYER"
-Title.Font = Enum.Font.SourceSansBold
-Title.TextScaled = true
-Title.TextColor3 = Color3.fromRGB(0,0,0)
-
 -- Tombol Close (X)
 local CloseBtn = Instance.new("TextButton", Frame)
 CloseBtn.Size = UDim2.new(0, 30, 0, 30)
@@ -53,6 +44,28 @@ CloseBtn.Font = Enum.Font.SourceSansBold
 CloseBtn.TextScaled = true
 CloseBtn.Text = "X"
 CloseBtn.ZIndex = 2
+CloseBtn.MouseButton1Click:Connect(function()
+    -- Auto OFF semua fitur saat menu ditutup
+    WalkSpeedEnabled = false
+    Humanoid.WalkSpeed = 16
+    if FlyEnabled then
+        FlyEnabled = false
+        if FlyConn then FlyConn:Disconnect() end
+        if BodyVelocity then BodyVelocity:Destroy() end
+        if BodyGyro then BodyGyro:Destroy() end
+        Humanoid.PlatformStand = false
+    end
+    ScreenGui:Destroy()
+end)
+
+-- Judul
+local Title = Instance.new("TextLabel", Frame)
+Title.Size = UDim2.new(1,0,0,40)
+Title.BackgroundColor3 = Color3.fromRGB(255,255,255)
+Title.Text = "MENU PLAYER"
+Title.Font = Enum.Font.SourceSansBold
+Title.TextScaled = true
+Title.TextColor3 = Color3.fromRGB(0,0,0)
 
 -- === WalkSpeed ===
 local WalkBtn = Instance.new("TextButton", Frame)
@@ -92,6 +105,29 @@ WalkValue.TextColor3 = Color3.fromRGB(255,255,255)
 WalkValue.Font = Enum.Font.SourceSansBold
 WalkValue.TextScaled = true
 
+local draggingWalk = false
+WalkSliderFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        draggingWalk = true
+    end
+end)
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        draggingWalk = false
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if draggingWalk and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local relX = math.clamp((input.Position.X - WalkSliderFrame.AbsolutePosition.X) / WalkSliderFrame.AbsoluteSize.X, 0, 1)
+        CustomWalkSpeed = math.floor(relX * 200) -- max 200 speed
+        WalkFill.Size = UDim2.new(relX,0,1,0)
+        WalkValue.Text = tostring(CustomWalkSpeed)
+        if WalkSpeedEnabled then
+            Humanoid.WalkSpeed = CustomWalkSpeed
+        end
+    end
+end)
+
 -- === Fly ===
 local FlyBtn = Instance.new("TextButton", Frame)
 FlyBtn.Size = UDim2.new(0,80,0,30)
@@ -118,8 +154,8 @@ FlySliderFrame.Position = UDim2.new(0,10,0,180)
 FlySliderFrame.BackgroundColor3 = Color3.fromRGB(80,80,80)
 
 local FlyFill = Instance.new("Frame", FlySliderFrame)
-FlyFill.Size = UDim2.new(FlySpeed/200,0,1,0)
-FlyFill.BackgroundColor3 = Color3.fromRGB(0,120,255)
+FlyFill.Size = UDim2.new(FlySpeed/300,0,1,0) -- max 300
+FlyFill.BackgroundColor3 = Color3.fromRGB(0,200,255)
 
 local FlyValue = Instance.new("TextLabel", Frame)
 FlyValue.Size = UDim2.new(0,100,0,20)
@@ -129,6 +165,26 @@ FlyValue.Text = tostring(FlySpeed)
 FlyValue.TextColor3 = Color3.fromRGB(255,255,255)
 FlyValue.Font = Enum.Font.SourceSansBold
 FlyValue.TextScaled = true
+
+local draggingFly = false
+FlySliderFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        draggingFly = true
+    end
+end)
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        draggingFly = false
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if draggingFly and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local relX = math.clamp((input.Position.X - FlySliderFrame.AbsolutePosition.X) / FlySliderFrame.AbsoluteSize.X, 0, 1)
+        FlySpeed = math.floor(relX * 300) -- max 300 speed
+        FlyFill.Size = UDim2.new(relX,0,1,0)
+        FlyValue.Text = tostring(FlySpeed)
+    end
+end)
 
 -- === Functions ===
 local function UpdateWalk()
@@ -168,38 +224,6 @@ local function ToggleFly(state)
     end
 end
 
--- === Slider Logic ===
-local draggingWalk, draggingFly = false, false
-
--- Walk
-WalkSliderFrame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then draggingWalk = true end
-end)
-UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then draggingWalk, draggingFly = false, false end
-end)
-UserInputService.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement then
-        if draggingWalk then
-            local relX = math.clamp((input.Position.X - WalkSliderFrame.AbsolutePosition.X) / WalkSliderFrame.AbsoluteSize.X, 0, 1)
-            CustomWalkSpeed = math.max(1, math.floor(relX * 200))
-            WalkFill.Size = UDim2.new(relX,0,1,0)
-            WalkValue.Text = tostring(CustomWalkSpeed)
-            if WalkSpeedEnabled then Humanoid.WalkSpeed = CustomWalkSpeed end
-        elseif draggingFly then
-            local relX = math.clamp((input.Position.X - FlySliderFrame.AbsolutePosition.X) / FlySliderFrame.AbsoluteSize.X, 0, 1)
-            FlySpeed = math.max(1, math.floor(relX * 200))
-            FlyFill.Size = UDim2.new(relX,0,1,0)
-            FlyValue.Text = tostring(FlySpeed)
-        end
-    end
-end)
-
--- Fly
-FlySliderFrame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then draggingFly = true end
-end)
-
 -- === Button Logic ===
 WalkBtn.MouseButton1Click:Connect(function()
     WalkSpeedEnabled = not WalkSpeedEnabled
@@ -213,15 +237,6 @@ FlyBtn.MouseButton1Click:Connect(function()
     FlyBtn.Text = FlyEnabled and "ON" or "OFF"
     FlyBtn.BackgroundColor3 = FlyEnabled and Color3.fromRGB(0,200,0) or Color3.fromRGB(255,49,93)
     ToggleFly(FlyEnabled)
-end)
-
--- Close tombol matikan semua
-CloseBtn.MouseButton1Click:Connect(function()
-    WalkSpeedEnabled = false
-    FlyEnabled = false
-    UpdateWalk()
-    ToggleFly(false)
-    ScreenGui:Destroy()
 end)
 
 -- Respawn fix
