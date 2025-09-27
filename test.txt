@@ -203,5 +203,97 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- === Sisa Logic (Walk & Fly, Slider) ===
--- ... (pakai yang sudah ada di scriptmu, tinggal ganti parent jadi Content untuk tombol/slider)
+-- === Functions ===
+local function UpdateWalk()
+    if WalkSpeedEnabled then
+        Humanoid.WalkSpeed = CustomWalkSpeed
+    else
+        Humanoid.WalkSpeed = 16
+    end
+end
+
+local function ToggleFly(state)
+    FlyEnabled = state
+    if FlyEnabled then
+        local HRP = Character:WaitForChild("HumanoidRootPart")
+        Humanoid.PlatformStand = true
+        BodyGyro = Instance.new("BodyGyro", HRP)
+        BodyGyro.MaxTorque = Vector3.new(9e9,9e9,9e9)
+        BodyVelocity = Instance.new("BodyVelocity", HRP)
+        BodyVelocity.MaxForce = Vector3.new(9e9,9e9,9e9)
+        FlyConn = RunService.RenderStepped:Connect(function()
+            local camCF = workspace.CurrentCamera.CFrame
+            local move = Vector3.new()
+            if UserInputService:IsKeyDown(Enum.KeyCode.W) then move += camCF.LookVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.S) then move -= camCF.LookVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.A) then move -= camCF.RightVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.D) then move += camCF.RightVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then move += Vector3.new(0,1,0) end
+            if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then move -= Vector3.new(0,1,0) end
+            BodyVelocity.Velocity = move.Magnitude > 0 and move.Unit * FlySpeed or Vector3.new()
+            BodyGyro.CFrame = camCF
+        end)
+    else
+        if FlyConn then FlyConn:Disconnect() end
+        if BodyVelocity then BodyVelocity:Destroy() end
+        if BodyGyro then BodyGyro:Destroy() end
+        Humanoid.PlatformStand = false
+    end
+end
+
+-- === Slider Logic ===
+local draggingWalk, draggingFly = false, false
+
+WalkSliderFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then draggingWalk = true end
+end)
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then draggingWalk = false end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if draggingWalk and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local relX = math.clamp((input.Position.X - WalkSliderFrame.AbsolutePosition.X) / WalkSliderFrame.AbsoluteSize.X, 0, 1)
+        CustomWalkSpeed = math.floor(relX * 200)
+        WalkFill.Size = UDim2.new(relX,0,1,0)
+        WalkValue.Text = tostring(CustomWalkSpeed)
+        if WalkSpeedEnabled then Humanoid.WalkSpeed = CustomWalkSpeed end
+    end
+end)
+
+FlySliderFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then draggingFly = true end
+end)
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then draggingFly = false end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if draggingFly and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local relX = math.clamp((input.Position.X - FlySliderFrame.AbsolutePosition.X) / FlySliderFrame.AbsoluteSize.X, 0, 1)
+        FlySpeed = math.floor(relX * 300)
+        FlyFill.Size = UDim2.new(relX,0,1,0)
+        FlyValue.Text = tostring(FlySpeed)
+    end
+end)
+
+-- === Button Logic ===
+WalkBtn.MouseButton1Click:Connect(function()
+    WalkSpeedEnabled = not WalkSpeedEnabled
+    WalkBtn.Text = WalkSpeedEnabled and "ON" or "OFF"
+    WalkBtn.BackgroundColor3 = WalkSpeedEnabled and Color3.fromRGB(0,200,0) or Color3.fromRGB(255,49,93)
+    UpdateWalk()
+end)
+
+FlyBtn.MouseButton1Click:Connect(function()
+    FlyEnabled = not FlyEnabled
+    FlyBtn.Text = FlyEnabled and "ON" or "OFF"
+    FlyBtn.BackgroundColor3 = FlyEnabled and Color3.fromRGB(0,200,0) or Color3.fromRGB(255,49,93)
+    ToggleFly(FlyEnabled)
+end)
+
+-- Respawn fix
+Player.CharacterAdded:Connect(function(c)
+    Character = c
+    Humanoid = c:WaitForChild("Humanoid")
+    UpdateWalk()
+    if FlyEnabled then ToggleFly(true) end
+end)
