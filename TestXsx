@@ -1,4 +1,4 @@
--- // XSX Styled Movement Menu (Revised UI + Drag on Title + Toggle Text ON/OFF)
+-- // XSX Styled Movement Menu (Revised UI + Drag on Title)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -137,17 +137,22 @@ local function CreateTab(name)
     return Page
 end
 
--- Utility: styled button
-local function CreateButton(parent,text,callback)
+-- Utility: styled button with toggle support
+local function CreateToggleButton(parent,text,getState,setState)
     local Btn = Instance.new("TextButton", parent)
     Btn.Size = UDim2.new(0.9,0,0,40)
     Btn.BackgroundColor3 = Color3.fromRGB(40,40,40)
-    Btn.TextColor3 = Color3.fromRGB(255,255,255)
     Btn.Font = Enum.Font.GothamBold
     Btn.TextSize = 16
     Btn.Text = text
+    Btn.TextColor3 = getState() and Color3.fromRGB(0,120,255) or Color3.fromRGB(220,60,60)
     Instance.new("UICorner", Btn).CornerRadius = UDim.new(0,6)
-    Btn.MouseButton1Click:Connect(function() callback(Btn) end)
+
+    Btn.MouseButton1Click:Connect(function()
+        setState(not getState())
+        Btn.TextColor3 = getState() and Color3.fromRGB(0,120,255) or Color3.fromRGB(220,60,60)
+    end)
+
     return Btn
 end
 
@@ -214,61 +219,52 @@ UIList.FillDirection = Enum.FillDirection.Vertical
 UIList.HorizontalAlignment = Enum.HorizontalAlignment.Center
 UIList.VerticalAlignment = Enum.VerticalAlignment.Top
 
--- WalkSpeed Toggle Button
-local WalkBtn = CreateButton(MovementPage,"OFF",function(btn)
-    WalkSpeedEnabled = not WalkSpeedEnabled
-    Humanoid.WalkSpeed = WalkSpeedEnabled and CustomWalkSpeed or 16
-    if WalkSpeedEnabled then
-        btn.Text = "ON"
-        btn.BackgroundColor3 = Color3.fromRGB(60,180,75)
-    else
-        btn.Text = "OFF"
-        btn.BackgroundColor3 = Color3.fromRGB(220,60,60)
+-- WalkSpeed toggle
+CreateToggleButton(MovementPage,"WalkSpeed",
+    function() return WalkSpeedEnabled end,
+    function(state)
+        WalkSpeedEnabled = state
+        Humanoid.WalkSpeed = WalkSpeedEnabled and CustomWalkSpeed or 16
     end
-end)
-WalkBtn.Text = "OFF"
-WalkBtn.BackgroundColor3 = Color3.fromRGB(220,60,60)
+)
 
 CreateSlider(MovementPage,"WalkSpeed",0,200,16,function(val)
     CustomWalkSpeed = val
     if WalkSpeedEnabled then Humanoid.WalkSpeed = val end
 end)
 
--- Fly Toggle Button
-local FlyBtn = CreateButton(MovementPage,"OFF",function(btn)
-    FlyEnabled = not FlyEnabled
-    if FlyEnabled then
-        local HRP = Character:WaitForChild("HumanoidRootPart")
-        Humanoid.PlatformStand = true
-        BodyGyro = Instance.new("BodyGyro", HRP)
-        BodyGyro.MaxTorque = Vector3.new(9e9,9e9,9e9)
-        BodyVelocity = Instance.new("BodyVelocity", HRP)
-        BodyVelocity.MaxForce = Vector3.new(9e9,9e9,9e9)
-        FlyConn = RunService.RenderStepped:Connect(function()
-            local camCF = workspace.CurrentCamera.CFrame
-            local move = Vector3.new()
-            if UserInputService:IsKeyDown(Enum.KeyCode.W) then move += camCF.LookVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.S) then move -= camCF.LookVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.A) then move -= camCF.RightVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.D) then move += camCF.RightVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then move += Vector3.new(0,1,0) end
-            if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then move -= Vector3.new(0,1,0) end
-            BodyVelocity.Velocity = move.Magnitude > 0 and move.Unit * FlySpeed or Vector3.new()
-            BodyGyro.CFrame = camCF
-        end)
-        btn.Text = "ON"
-        btn.BackgroundColor3 = Color3.fromRGB(60,180,75)
-    else
-        if FlyConn then FlyConn:Disconnect() end
-        if BodyVelocity then BodyVelocity:Destroy() end
-        if BodyGyro then BodyGyro:Destroy() end
-        Humanoid.PlatformStand = false
-        btn.Text = "OFF"
-        btn.BackgroundColor3 = Color3.fromRGB(220,60,60)
+-- Fly toggle
+CreateToggleButton(MovementPage,"Fly",
+    function() return FlyEnabled end,
+    function(state)
+        FlyEnabled = state
+        if FlyEnabled then
+            local HRP = Character:WaitForChild("HumanoidRootPart")
+            Humanoid.PlatformStand = true
+            BodyGyro = Instance.new("BodyGyro", HRP)
+            BodyGyro.MaxTorque = Vector3.new(9e9,9e9,9e9)
+            BodyVelocity = Instance.new("BodyVelocity", HRP)
+            BodyVelocity.MaxForce = Vector3.new(9e9,9e9,9e9)
+            FlyConn = RunService.RenderStepped:Connect(function()
+                local camCF = workspace.CurrentCamera.CFrame
+                local move = Vector3.new()
+                if UserInputService:IsKeyDown(Enum.KeyCode.W) then move += camCF.LookVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.S) then move -= camCF.LookVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.A) then move -= camCF.RightVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.D) then move += camCF.RightVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.Space) then move += Vector3.new(0,1,0) end
+                if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then move -= Vector3.new(0,1,0) end
+                BodyVelocity.Velocity = move.Magnitude > 0 and move.Unit * FlySpeed or Vector3.new()
+                BodyGyro.CFrame = camCF
+            end)
+        else
+            if FlyConn then FlyConn:Disconnect() end
+            if BodyVelocity then BodyVelocity:Destroy() end
+            if BodyGyro then BodyGyro:Destroy() end
+            Humanoid.PlatformStand = false
+        end
     end
-end)
-FlyBtn.Text = "OFF"
-FlyBtn.BackgroundColor3 = Color3.fromRGB(220,60,60)
+)
 
 CreateSlider(MovementPage,"FlySpeed",0,300,100,function(val) FlySpeed = val end)
 
