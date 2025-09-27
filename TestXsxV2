@@ -1,4 +1,4 @@
--- // XSX Styled Movement Menu (Revised UI + Drag on Title)
+-- // XSX Styled Movement Menu
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -13,6 +13,13 @@ local CustomWalkSpeed = 16
 local FlyEnabled = false
 local FlySpeed = 100
 local BodyGyro, BodyVelocity, FlyConn
+
+-- Misc vars
+local Boxed = false
+local FlingEnabled = false
+local FlingSpeed = 200
+local FlingConn
+local NoclipEnabled = false
 
 -- Parent aman
 local ScreenGui = Instance.new("ScreenGui")
@@ -272,7 +279,7 @@ CreateSlider(MovementPage,"FlySpeed",0,300,100,function(val) FlySpeed = val end)
 CreateTab("Visual")
 CreateTab("Misc")
 
--- === Misc Tab: InvisFling ===
+-- === Misc Tab Features ===
 local MiscPage = Tabs["Misc"].Page
 local UIListMisc = Instance.new("UIListLayout", MiscPage)
 UIListMisc.Padding = UDim.new(0,10)
@@ -280,62 +287,81 @@ UIListMisc.FillDirection = Enum.FillDirection.Vertical
 UIListMisc.HorizontalAlignment = Enum.HorizontalAlignment.Center
 UIListMisc.VerticalAlignment = Enum.VerticalAlignment.Top
 
-local function invisFling()
-    local plr = Player
-    local character = plr.Character
-    if not character then return end
-
-    -- Invisible
-    for _, part in pairs(character:GetDescendants()) do
-        if part:IsA("BasePart") then
-            part.Transparency = 1
-            if part:FindFirstChild("Decal") then
-                part.Decal.Transparency = 1
-            end
-        elseif part:IsA("Accessory") and part:FindFirstChild("Handle") then
-            part.Handle.Transparency = 1
-        end
-    end
-
-    -- Fling effect
-    local hrp = character:FindFirstChild("HumanoidRootPart")
-    if hrp then
-        if hrp:FindFirstChild("InvisFlingConnection") then
-            hrp.InvisFlingConnection.Value:Disconnect()
-            hrp.InvisFlingConnection:Destroy()
-        end
-
-        local conn
-        conn = hrp.Touched:Connect(function(hit)
-            local otherHumanoid = hit.Parent:FindFirstChild("Humanoid")
-            if otherHumanoid and hit.Parent ~= character then
-                local otherHRP = hit.Parent:FindFirstChild("HumanoidRootPart")
-                if otherHRP then
-                    local bodyVelocity = Instance.new("BodyVelocity")
-                    bodyVelocity.Velocity = Vector3.new(0,50,0)
-                    bodyVelocity.MaxForce = Vector3.new(1e5,1e5,1e5)
-                    bodyVelocity.Parent = otherHRP
-                    game:GetService("Debris"):AddItem(bodyVelocity,0.5)
+-- Box Character toggle
+CreateToggleButton(MiscPage,"Box Character",
+    function() return Boxed end,
+    function(state)
+        Boxed = state
+        if Boxed then
+            for _,part in pairs(Character:GetChildren()) do
+                if part:IsA("BasePart") then
+                    part.Transparency = 0.5
+                    part.Material = Enum.Material.Neon
+                    part.Size = Vector3.new(2,2,2)
+                    part.Anchored = false
                 end
             end
-        end)
-
-        local marker = Instance.new("ObjectValue")
-        marker.Name = "InvisFlingConnection"
-        marker.Value = conn
-        marker.Parent = hrp
+        else
+            for _,part in pairs(Character:GetChildren()) do
+                if part:IsA("BasePart") then
+                    part.Size = part.Name == "HumanoidRootPart" and Vector3.new(2,2,1) or Vector3.new(1,1,1)
+                    part.Material = Enum.Material.SmoothPlastic
+                    part.Transparency = 0
+                end
+            end
+        end
     end
-end
+)
 
-local InvisFlingBtn = Instance.new("TextButton", MiscPage)
-InvisFlingBtn.Size = UDim2.new(0.9,0,0,40)
-InvisFlingBtn.BackgroundColor3 = Color3.fromRGB(40,40,40)
-InvisFlingBtn.Font = Enum.Font.GothamBold
-InvisFlingBtn.TextSize = 16
-InvisFlingBtn.Text = "InvisFling"
-InvisFlingBtn.TextColor3 = Color3.fromRGB(255,255,255)
-Instance.new("UICorner", InvisFlingBtn).CornerRadius = UDim.new(0,6)
-InvisFlingBtn.MouseButton1Click:Connect(invisFling)
+-- Fling toggle
+CreateToggleButton(MiscPage,"Fling",
+    function() return FlingEnabled end,
+    function(state)
+        FlingEnabled = state
+        local HRP = Character:WaitForChild("HumanoidRootPart")
+        local BodyGyroFling = Instance.new("BodyGyro", HRP)
+        local BodyVelocityFling = Instance.new("BodyVelocity", HRP)
+        BodyGyroFling.MaxTorque = Vector3.new(9e9,9e9,9e9)
+        BodyVelocityFling.MaxForce = Vector3.new(9e9,9e9,9e9)
+        BodyVelocityFling.Velocity = Vector3.new()
+        if FlingEnabled then
+            NoclipEnabled = true
+            FlingConn = RunService.Heartbeat:Connect(function()
+                BodyGyroFling.CFrame = BodyGyroFling.CFrame * CFrame.Angles(math.rad(1000),math.rad(1000),math.rad(1000))
+                local camCF = workspace.CurrentCamera.CFrame
+                local move = Vector3.new()
+                if UserInputService:IsKeyDown(Enum.KeyCode.W) then move += camCF.LookVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.S) then move -= camCF.LookVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.A) then move -= camCF.RightVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.D) then move += camCF.RightVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.Space) then move += Vector3.new(0,1,0) end
+                if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then move -= Vector3.new(0,1,0) end
+                BodyVelocityFling.Velocity = move.Magnitude > 0 and move.Unit * FlingSpeed or Vector3.new()
+            end)
+        else
+            if FlingConn then FlingConn:Disconnect() end
+            BodyGyroFling:Destroy()
+            BodyVelocityFling:Destroy()
+            NoclipEnabled = false
+        end
+    end
+)
+
+-- Fling speed slider
+CreateSlider(MiscPage,"Fling Speed",0,500,200,function(val)
+    FlingSpeed = val
+end)
+
+-- Noclip loop
+RunService.Stepped:Connect(function()
+    if NoclipEnabled then
+        for _,part in pairs(Character:GetChildren()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = false
+            end
+        end
+    end
+end)
 
 -- Minimize
 local minimized = false
