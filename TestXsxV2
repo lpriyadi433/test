@@ -18,6 +18,8 @@ local BodyGyro, BodyVelocity, FlyConn
 local FlingEnabled = false
 local FlingSpeed = 5000
 local FlingGyro, FlingFlingConn, NoclipConn
+local OriginalParts = {}
+local BoxPart
 
 -- Parent aman
 local ScreenGui = Instance.new("ScreenGui")
@@ -285,51 +287,63 @@ UIListMisc.FillDirection = Enum.FillDirection.Vertical
 UIListMisc.HorizontalAlignment = Enum.HorizontalAlignment.Center
 UIListMisc.VerticalAlignment = Enum.VerticalAlignment.Top
 
--- Fling toggle (aktifkan Fly & NoClip otomatis)
+-- Fling toggle (kotak + fly + noclip + fling + reset)
 CreateToggleButton(MiscPage,"Fling",
     function() return FlingEnabled end,
     function(state)
         FlingEnabled = state
         local HRP = Character:WaitForChild("HumanoidRootPart")
 
-        -- Fly otomatis
-        if state and not FlyEnabled then
-            FlyEnabled = true
-            Humanoid.PlatformStand = true
-            BodyGyro = Instance.new("BodyGyro", HRP)
-            BodyGyro.MaxTorque = Vector3.new(9e9,9e9,9e9)
-            BodyVelocity = Instance.new("BodyVelocity", HRP)
-            BodyVelocity.MaxForce = Vector3.new(9e9,9e9,9e9)
-            FlyConn = RunService.RenderStepped:Connect(function()
-                local camCF = workspace.CurrentCamera.CFrame
-                local move = Vector3.new()
-                if UserInputService:IsKeyDown(Enum.KeyCode.W) then move += camCF.LookVector end
-                if UserInputService:IsKeyDown(Enum.KeyCode.S) then move -= camCF.LookVector end
-                if UserInputService:IsKeyDown(Enum.KeyCode.A) then move -= camCF.RightVector end
-                if UserInputService:IsKeyDown(Enum.KeyCode.D) then move += camCF.RightVector end
-                if UserInputService:IsKeyDown(Enum.KeyCode.Space) then move += Vector3.new(0,1,0) end
-                if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then move -= Vector3.new(0,1,0) end
-                BodyVelocity.Velocity = move.Magnitude > 0 and move.Unit * FlySpeed or Vector3.new()
-                BodyGyro.CFrame = camCF
-            end)
-        end
-
-        -- NoClip otomatis
-        local function NoClip()
-            for _, part in pairs(Character:GetDescendants()) do
-                if part:IsA("BasePart") then
-                    part.CanCollide = false
+        if state then
+            -- Ubah karakter menjadi kotak
+            OriginalParts = {}
+            for _, part in pairs(Character:GetChildren()) do
+                if part:IsA("BasePart") and part ~= HRP then
+                    table.insert(OriginalParts, {part = part, visible = part.Transparency})
+                    part.Transparency = 1
                 end
             end
-        end
-        if state then
-            NoclipConn = RunService.Stepped:Connect(NoClip)
-        elseif NoclipConn then
-            NoclipConn:Disconnect()
-        end
 
-        -- BodyAngularVelocity untuk Fling
-        if state then
+            BoxPart = Instance.new("Part")
+            BoxPart.Size = Vector3.new(2,2,1)
+            BoxPart.Anchored = false
+            BoxPart.CanCollide = false
+            BoxPart.Position = HRP.Position
+            BoxPart.Color = Color3.fromRGB(255,0,0)
+            BoxPart.Parent = Character
+
+            -- Fly otomatis
+            if not FlyEnabled then
+                FlyEnabled = true
+                Humanoid.PlatformStand = true
+                BodyGyro = Instance.new("BodyGyro", HRP)
+                BodyGyro.MaxTorque = Vector3.new(9e9,9e9,9e9)
+                BodyVelocity = Instance.new("BodyVelocity", HRP)
+                BodyVelocity.MaxForce = Vector3.new(9e9,9e9,9e9)
+                FlyConn = RunService.RenderStepped:Connect(function()
+                    local camCF = workspace.CurrentCamera.CFrame
+                    local move = Vector3.new()
+                    if UserInputService:IsKeyDown(Enum.KeyCode.W) then move += camCF.LookVector end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.S) then move -= camCF.LookVector end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.A) then move -= camCF.RightVector end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.D) then move += camCF.RightVector end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.Space) then move += Vector3.new(0,1,0) end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then move -= Vector3.new(0,1,0) end
+                    BodyVelocity.Velocity = move.Magnitude > 0 and move.Unit * FlySpeed or Vector3.new()
+                    BodyGyro.CFrame = camCF
+                end)
+            end
+
+            -- NoClip otomatis
+            NoclipConn = RunService.Stepped:Connect(function()
+                for _, part in pairs(Character:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = false
+                    end
+                end
+            end)
+
+            -- BodyAngularVelocity untuk Fling
             FlingGyro = Instance.new("BodyAngularVelocity", HRP)
             FlingGyro.MaxTorque = Vector3.new(9e9,9e9,9e9)
             FlingGyro.AngularVelocity = Vector3.new(FlingSpeed,FlingSpeed,FlingSpeed)
@@ -338,7 +352,9 @@ CreateToggleButton(MiscPage,"Fling",
                 if not FlingEnabled then return end
                 FlingGyro.AngularVelocity = Vector3.new(FlingSpeed,FlingSpeed,FlingSpeed)
             end)
+
         else
+            -- Matikan semua efek
             if FlingFlingConn then FlingFlingConn:Disconnect() end
             if FlingGyro then FlingGyro:Destroy() end
             if FlyConn then FlyConn:Disconnect() end
@@ -346,6 +362,15 @@ CreateToggleButton(MiscPage,"Fling",
             if BodyGyro then BodyGyro:Destroy() end
             Humanoid.PlatformStand = false
             if NoclipConn then NoclipConn:Disconnect() end
+
+            -- Kembalikan part asli & hapus kotak
+            if BoxPart then BoxPart:Destroy() end
+            for _, data in pairs(OriginalParts) do
+                data.part.Transparency = data.visible
+            end
+
+            -- Reset karakter
+            Player:LoadCharacter()
         end
     end
 )
