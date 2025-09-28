@@ -14,9 +14,10 @@ local FlyEnabled = false
 local FlySpeed = 100
 local BodyGyro, BodyVelocity, FlyConn
 
--- Misc vars
+-- SpinFling Vars
 local SpinFlingEnabled = false
-local SpinFlingConnection
+local SpinSpeed = 5000
+local SpinAngular
 
 -- Parent aman
 local ScreenGui = Instance.new("ScreenGui")
@@ -272,49 +273,39 @@ CreateToggleButton(MovementPage,"Fly",
 
 CreateSlider(MovementPage,"FlySpeed",0,300,100,function(val) FlySpeed = val end)
 
--- Placeholder Tabs
+-- === Placeholder Tabs ===
 CreateTab("Visual")
 local MiscPage = CreateTab("Misc")
 
--- === Misc Tab ===
+-- Misc: SpinFling toggle
 local UIListMisc = Instance.new("UIListLayout", MiscPage)
 UIListMisc.Padding = UDim.new(0,10)
 UIListMisc.FillDirection = Enum.FillDirection.Vertical
 UIListMisc.HorizontalAlignment = Enum.HorizontalAlignment.Center
 UIListMisc.VerticalAlignment = Enum.VerticalAlignment.Top
 
--- SpinFling toggle (fast & proximity)
-CreateToggleButton(MiscPage,"SpinFling",
+CreateToggleButton(MiscPage, "SpinFling",
     function() return SpinFlingEnabled end,
     function(state)
         SpinFlingEnabled = state
-        local HRP = Character:FindFirstChild("HumanoidRootPart")
-        if not HRP then return end
-
+        local HRP = Character:WaitForChild("HumanoidRootPart")
         if SpinFlingEnabled then
-            SpinFlingConnection = RunService.Heartbeat:Connect(function()
-                for _, other in pairs(Players:GetPlayers()) do
-                    if other ~= Player and other.Character and other.Character:FindFirstChild("HumanoidRootPart") then
-                        local targetHRP = other.Character.HumanoidRootPart
-                        local distance = (targetHRP.Position - HRP.Position).Magnitude
-                        if distance <= 5 then -- hanya jika dekat / menyentuh
-                            -- Putar karakter sangat cepat
-                            HRP.CFrame = HRP.CFrame * CFrame.Angles(0, math.rad(360), 0)
-                            -- Dorong player lain
-                            local direction = (targetHRP.Position - HRP.Position).Unit
-                            targetHRP.Velocity = direction * 2000
-                        end
-                    end
-                end
-            end)
+            SpinAngular = Instance.new("BodyAngularVelocity")
+            SpinAngular.MaxTorque = Vector3.new(9e9,9e9,9e9)
+            SpinAngular.AngularVelocity = Vector3.new(0,SpinSpeed,0)
+            SpinAngular.Parent = HRP
         else
-            if SpinFlingConnection then
-                SpinFlingConnection:Disconnect()
-                SpinFlingConnection = nil
-            end
+            if SpinAngular then SpinAngular:Destroy() end
         end
     end
 )
+
+CreateSlider(MiscPage, "Spin Speed", 1000, 20000, SpinSpeed, function(val)
+    SpinSpeed = val
+    if SpinFlingEnabled and SpinAngular then
+        SpinAngular.AngularVelocity = Vector3.new(0,SpinSpeed,0)
+    end
+end)
 
 -- Minimize
 local minimized = false
@@ -331,5 +322,10 @@ Player.CharacterAdded:Connect(function(c)
     Humanoid = c:WaitForChild("Humanoid")
     if WalkSpeedEnabled then Humanoid.WalkSpeed = CustomWalkSpeed end
     if FlyEnabled then FlyEnabled = false end
-    if SpinFlingEnabled then SpinFlingEnabled = false end
+    if SpinFlingEnabled then
+        SpinAngular = Instance.new("BodyAngularVelocity")
+        SpinAngular.MaxTorque = Vector3.new(9e9,9e9,9e9)
+        SpinAngular.AngularVelocity = Vector3.new(0,SpinSpeed,0)
+        SpinAngular.Parent = Character:WaitForChild("HumanoidRootPart")
+    end
 end)
