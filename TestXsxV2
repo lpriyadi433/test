@@ -13,6 +13,8 @@ local CustomWalkSpeed = 16
 local FlyEnabled = false
 local FlySpeed = 100
 local BodyGyro, BodyVelocity, FlyConn
+local NoClipEnabled = false
+local InfJumpEnabled = false
 
 -- Parent aman
 local ScreenGui = Instance.new("ScreenGui")
@@ -211,6 +213,25 @@ local function CreateSlider(parent,text,min,max,default,callback)
     end)
 end
 
+-- === Home Tab ===
+local HomePage = CreateTab("Home")
+local UIList_Home = Instance.new("UIListLayout", HomePage)
+UIList_Home.Padding = UDim.new(0,10)
+UIList_Home.FillDirection = Enum.FillDirection.Vertical
+UIList_Home.HorizontalAlignment = Enum.HorizontalAlignment.Center
+UIList_Home.VerticalAlignment = Enum.VerticalAlignment.Top
+
+local HomeLabel = Instance.new("TextLabel", HomePage)
+HomeLabel.Size = UDim2.new(0.9,0,0,40)
+HomeLabel.BackgroundTransparency = 1
+HomeLabel.Text = "Selamat datang di XSX Movement Menu!"
+HomeLabel.Font = Enum.Font.GothamBold
+HomeLabel.TextSize = 18
+HomeLabel.TextColor3 = Color3.fromRGB(255,255,255)
+HomeLabel.TextWrapped = true
+HomeLabel.TextXAlignment = Enum.TextXAlignment.Center
+HomeLabel.Position = UDim2.new(0,0,0,10)
+
 -- === Movement Tab ===
 local MovementPage = CreateTab("Movement")
 local UIList = Instance.new("UIListLayout", MovementPage)
@@ -270,8 +291,6 @@ CreateSlider(MovementPage,"FlySpeed",0,300,100,function(val) FlySpeed = val end)
 
 -- === Teleport Tab ===
 local TeleportPage = CreateTab("Teleport")
-
--- Scrollable frame untuk tombol
 local ScrollFrame = Instance.new("ScrollingFrame", TeleportPage)
 ScrollFrame.Size = UDim2.new(1,0,1,0)
 ScrollFrame.Position = UDim2.new(0,0,0,0)
@@ -287,7 +306,6 @@ UIList_Teleport.FillDirection = Enum.FillDirection.Vertical
 UIList_Teleport.HorizontalAlignment = Enum.HorizontalAlignment.Center
 UIList_Teleport.VerticalAlignment = Enum.VerticalAlignment.Top
 
--- Fungsi buat tombol teleport ke player
 local function CreateTeleportButton(player)
     local Btn = Instance.new("TextButton", ScrollFrame)
     Btn.Size = UDim2.new(0.9,0,0,40)
@@ -305,7 +323,6 @@ local function CreateTeleportButton(player)
     end)
 end
 
--- Buat tombol untuk semua player lain di server
 local function UpdateTeleportButtons()
     for _, obj in pairs(ScrollFrame:GetChildren()) do
         if obj:IsA("TextButton") then obj:Destroy() end
@@ -315,20 +332,63 @@ local function UpdateTeleportButtons()
             CreateTeleportButton(plr)
         end
     end
-    -- Update CanvasSize agar scrollable
     local contentSize = UIList_Teleport.AbsoluteContentSize.Y
     ScrollFrame.CanvasSize = UDim2.new(0,0,0,contentSize + 10)
 end
 
--- Initial spawn
 UpdateTeleportButtons()
-
--- Update tombol saat player masuk atau keluar
 Players.PlayerAdded:Connect(UpdateTeleportButtons)
 Players.PlayerRemoving:Connect(UpdateTeleportButtons)
 
--- Placeholder Tabs
-CreateTab("Misc")
+-- === Misc Tab ===
+local MiscPage = CreateTab("Misc")
+local UIList_Misc = Instance.new("UIListLayout", MiscPage)
+UIList_Misc.Padding = UDim.new(0,10)
+UIList_Misc.FillDirection = Enum.FillDirection.Vertical
+UIList_Misc.HorizontalAlignment = Enum.HorizontalAlignment.Center
+UIList_Misc.VerticalAlignment = Enum.VerticalAlignment.Top
+
+-- Toggle NoClip
+CreateToggleButton(MiscPage, "NoClip",
+    function() return NoClipEnabled end,
+    function(state)
+        NoClipEnabled = state
+    end
+)
+
+-- Toggle InfJump
+CreateToggleButton(MiscPage, "InfJump",
+    function() return InfJumpEnabled end,
+    function(state)
+        InfJumpEnabled = state
+    end
+)
+
+-- Stepped event untuk NoClip dan InfJump
+RunService.Stepped:Connect(function()
+    if Character then
+        -- NoClip
+        if NoClipEnabled then
+            for _, part in pairs(Character:GetChildren()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = false
+                end
+            end
+        else
+            for _, part in pairs(Character:GetChildren()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = true
+                end
+            end
+        end
+    end
+end)
+
+UserInputService.JumpRequest:Connect(function()
+    if InfJumpEnabled and Humanoid then
+        Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+    end
+end)
 
 -- Minimize
 local minimized = false
@@ -344,5 +404,4 @@ Player.CharacterAdded:Connect(function(c)
     Character = c
     Humanoid = c:WaitForChild("Humanoid")
     if WalkSpeedEnabled then Humanoid.WalkSpeed = CustomWalkSpeed end
-    if FlyEnabled then FlyEnabled = false end
 end)
