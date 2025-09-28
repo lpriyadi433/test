@@ -14,11 +14,6 @@ local FlyEnabled = false
 local FlySpeed = 100
 local BodyGyro, BodyVelocity, FlyConn
 
--- SpinFling Vars
-local SpinFlingEnabled = false
-local SpinSpeed = 5000
-local SpinAngular
-
 -- Parent aman
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "XSXMovementUI"
@@ -273,37 +268,84 @@ CreateToggleButton(MovementPage,"Fly",
 
 CreateSlider(MovementPage,"FlySpeed",0,300,100,function(val) FlySpeed = val end)
 
--- === Placeholder Tabs ===
+-- Placeholder Tabs
 CreateTab("Visual")
-local MiscPage = CreateTab("Misc")
+CreateTab("Misc")
 
--- Misc: SpinFling toggle
+-- === Misc Tab: SpinFling + Fly + NoClip ===
+local MiscPage = Tabs["Misc"].Page
 local UIListMisc = Instance.new("UIListLayout", MiscPage)
 UIListMisc.Padding = UDim.new(0,10)
 UIListMisc.FillDirection = Enum.FillDirection.Vertical
 UIListMisc.HorizontalAlignment = Enum.HorizontalAlignment.Center
 UIListMisc.VerticalAlignment = Enum.VerticalAlignment.Top
 
-CreateToggleButton(MiscPage, "SpinFling",
+-- SpinFling Vars
+local SpinFlingEnabled = false
+local SpinSpeed = 1000
+local SpinBAV
+local SpinFlyVelocity, SpinFlyGyro, SpinFlyConn
+local NoClipConn
+
+-- SpinFling toggle
+CreateToggleButton(MiscPage,"SpinFling",
     function() return SpinFlingEnabled end,
     function(state)
         SpinFlingEnabled = state
         local HRP = Character:WaitForChild("HumanoidRootPart")
+        local Humanoid = Character:WaitForChild("Humanoid")
+        
         if SpinFlingEnabled then
-            SpinAngular = Instance.new("BodyAngularVelocity")
-            SpinAngular.MaxTorque = Vector3.new(9e9,9e9,9e9)
-            SpinAngular.AngularVelocity = Vector3.new(0,SpinSpeed,0)
-            SpinAngular.Parent = HRP
+            -- BodyAngularVelocity untuk putar
+            SpinBAV = Instance.new("BodyAngularVelocity", HRP)
+            SpinBAV.MaxTorque = Vector3.new(9e9,9e9,9e9)
+            SpinBAV.AngularVelocity = Vector3.new(0, SpinSpeed, 0)
+
+            -- Fly
+            Humanoid.PlatformStand = true
+            SpinFlyVelocity = Instance.new("BodyVelocity", HRP)
+            SpinFlyVelocity.MaxForce = Vector3.new(9e9,9e9,9e9)
+            SpinFlyGyro = Instance.new("BodyGyro", HRP)
+            SpinFlyGyro.MaxTorque = Vector3.new(9e9,9e9,9e9)
+
+            SpinFlyConn = RunService.RenderStepped:Connect(function()
+                local camCF = workspace.CurrentCamera.CFrame
+                local move = Vector3.new()
+                if UserInputService:IsKeyDown(Enum.KeyCode.W) then move += camCF.LookVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.S) then move -= camCF.LookVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.A) then move -= camCF.RightVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.D) then move += camCF.RightVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.Space) then move += Vector3.new(0,1,0) end
+                if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then move -= Vector3.new(0,1,0) end
+                SpinFlyVelocity.Velocity = move.Magnitude > 0 and move.Unit * 150 or Vector3.new()
+                SpinFlyGyro.CFrame = camCF
+            end)
+
+            -- NoClip
+            NoClipConn = RunService.Stepped:Connect(function()
+                for _, part in pairs(Character:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = false
+                    end
+                end
+            end)
         else
-            if SpinAngular then SpinAngular:Destroy() end
+            -- Matikan semua efek
+            if SpinBAV then SpinBAV:Destroy() end
+            if SpinFlyConn then SpinFlyConn:Disconnect() end
+            if SpinFlyVelocity then SpinFlyVelocity:Destroy() end
+            if SpinFlyGyro then SpinFlyGyro:Destroy() end
+            if NoClipConn then NoClipConn:Disconnect() end
+            Humanoid.PlatformStand = false
         end
     end
 )
 
-CreateSlider(MiscPage, "Spin Speed", 1000, 20000, SpinSpeed, function(val)
+-- Spin Speed slider
+CreateSlider(MiscPage,"Spin Speed",100,5000,SpinSpeed,function(val)
     SpinSpeed = val
-    if SpinFlingEnabled and SpinAngular then
-        SpinAngular.AngularVelocity = Vector3.new(0,SpinSpeed,0)
+    if SpinBAV then
+        SpinBAV.AngularVelocity = Vector3.new(0, SpinSpeed, 0)
     end
 end)
 
@@ -322,10 +364,4 @@ Player.CharacterAdded:Connect(function(c)
     Humanoid = c:WaitForChild("Humanoid")
     if WalkSpeedEnabled then Humanoid.WalkSpeed = CustomWalkSpeed end
     if FlyEnabled then FlyEnabled = false end
-    if SpinFlingEnabled then
-        SpinAngular = Instance.new("BodyAngularVelocity")
-        SpinAngular.MaxTorque = Vector3.new(9e9,9e9,9e9)
-        SpinAngular.AngularVelocity = Vector3.new(0,SpinSpeed,0)
-        SpinAngular.Parent = Character:WaitForChild("HumanoidRootPart")
-    end
 end)
