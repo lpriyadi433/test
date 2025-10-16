@@ -1,0 +1,191 @@
+--// Pathfinding PRO v5 - Smart Move, Rotate, Jump, Height Fix, GUI Toggle //-- 
+
+local PathfindingService = game:GetService("PathfindingService")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+local root = character:WaitForChild("HumanoidRootPart")
+
+-- Daftar waypoint
+local waypoints = {
+	Vector3.new(-586.436, 3.971, 155.482),
+	Vector3.new(-547.414, 3.971, 144.578),
+	Vector3.new(-542.011, 11.111, 142.774),
+	Vector3.new(-536.347, 18.300, 141.413),
+	Vector3.new(-531.462, 25.139, 141.577),
+	Vector3.new(-525.649, 30.964, 142.392),
+	Vector3.new(-517.719, 31.449, 145.924),
+	Vector3.new(-510.623, 31.449, 145.088),
+	Vector3.new(-508.376, 31.449, 139.976),
+	Vector3.new(-507.903, 31.449, 132.376),
+	Vector3.new(-512.471, 31.449, 128.587),
+	Vector3.new(-515.747, 39.211, 128.396),
+	Vector3.new(-519.055, 45.458, 122.674),
+	Vector3.new(-520.150, 51.458, 117.333),
+	Vector3.new(-524.558, 52.974, 112.049),
+	Vector3.new(-524.378, 55.457, 103.958),
+	Vector3.new(-525.017, 57.380, 95.298),
+	Vector3.new(-524.877, 59.522, 85.430),
+	Vector3.new(-514.551, 60.293, 85.056),
+	Vector3.new(-498.646, 60.293, 77.808),
+	Vector3.new(-495.665, 60.293, 68.308),
+	Vector3.new(-494.230, 60.293, 60.780),
+	Vector3.new(-493.641, 60.293, 51.867),
+	Vector3.new(-489.997, 60.293, 45.066),
+	Vector3.new(-489.334, 63.078, 36.811),
+	Vector3.new(-490.124, 63.089, 24.519),
+	Vector3.new(-498.619, 63.089, 23.720),
+	Vector3.new(-506.691, 65.089, 23.247),
+	Vector3.new(-517.574, 65.891, 22.901),
+	Vector3.new(-543.948, 65.891, 21.579),
+	Vector3.new(-554.327, 59.839, 13.990),
+	Vector3.new(-563.682, 58.658, 5.739),
+	Vector3.new(-557.812, 68.179, 4.469),
+	Vector3.new(-552.342, 75.549, 4.357),
+	Vector3.new(-548.122, 82.214, 4.415),
+	Vector3.new(-540.911, 82.065, 4.365),
+	Vector3.new(-532.060, 84.329, 2.463),
+	Vector3.new(-523.971, 82.065, 0.595),
+	Vector3.new(-517.247, 82.065, -0.958),
+	Vector3.new(-511.005, 81.796, -2.399),
+	Vector3.new(-505.221, 87.394, -4.759),
+	Vector3.new(-497.978, 84.438, -6.631),
+	Vector3.new(-490.433, 83.377, -8.583),
+	Vector3.new(-484.011, 83.377, -10.102),
+	Vector3.new(-478.840, 86.789, -10.875),
+	Vector3.new(-477.876, 94.207, -7.539),
+	Vector3.new(-463.870, 93.866, 14.513),
+	Vector3.new(-460.822, 102.019, 19.388),
+	Vector3.new(-455.692, 100.108, 29.081),
+	Vector3.new(-454.347, 106.994, 35.087),
+	Vector3.new(-454.472, 112.115, 40.113),
+	Vector3.new(-455.565, 112.115, 53.706)
+}
+
+-- GUI
+local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+gui.Name = "SmartPathV5"
+
+local toggle = Instance.new("TextButton", gui)
+toggle.Size = UDim2.new(0, 160, 0, 40)
+toggle.Position = UDim2.new(0.03, 0, 0.1, 0)
+toggle.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
+toggle.Text = "🟢 Pathfinding ON"
+toggle.TextScaled = true
+toggle.Font = Enum.Font.SourceSansBold
+
+local delete = Instance.new("TextButton", gui)
+delete.Size = UDim2.new(0, 160, 0, 40)
+delete.Position = UDim2.new(0.03, 0, 0.18, 0)
+delete.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+delete.Text = "🗑️ Hapus Script"
+delete.TextScaled = true
+delete.Font = Enum.Font.SourceSansBold
+
+-- State
+local active = true
+local destroyed = false
+local moving = false
+
+-- Rotate ke arah target
+local function faceTarget(targetPos)
+	local lookVec = Vector3.new(targetPos.X, root.Position.Y, targetPos.Z)
+	root.CFrame = CFrame.lookAt(root.Position, lookVec)
+end
+
+-- Fungsi utama
+local function followPath()
+	if moving or destroyed then return end
+	moving = true
+
+	for i = 1, #waypoints - 1 do
+		if not active or destroyed then break end
+		local goal = waypoints[i + 1]
+
+		local path = PathfindingService:CreatePath({
+			AgentRadius = 2,
+			AgentHeight = 5,
+			AgentCanJump = true,
+			AgentJumpHeight = 8,
+			AgentMaxSlope = 45
+		})
+
+		path:ComputeAsync(root.Position, goal)
+
+		if path.Status == Enum.PathStatus.Success then
+			for _, node in ipairs(path:GetWaypoints()) do
+				if not active or destroyed then break end
+
+				-- Rotasi ke arah node
+				faceTarget(node.Position)
+
+				-- Validasi node: jangan terlalu jauh di udara
+				if math.abs(node.Position.Y - root.Position.Y) > 10 then
+					continue
+				end
+
+				-- Lakukan jump bila perlu
+				if node.Action == Enum.PathWaypointAction.Jump then
+					humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+				end
+
+				-- Gerak ke node
+				humanoid:MoveTo(node.Position)
+
+				-- Tunggu sampai selesai atau stuck
+				local finished = false
+				local conn = humanoid.MoveToFinished:Connect(function() finished = true end)
+				local lastPos = root.Position
+				local stuckTimer = 0
+
+				while not finished and active and not destroyed do
+					task.wait(0.2)
+					if (root.Position - lastPos).Magnitude < 0.3 then
+						stuckTimer += 0.2
+						if stuckTimer > 3 then
+							warn("⚠️ Stuck, lompat perbaikan.")
+							humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+							break
+						end
+					else
+						stuckTimer = 0
+						lastPos = root.Position
+					end
+				end
+				conn:Disconnect()
+			end
+		else
+			warn("❌ Path gagal di segmen " .. i)
+			humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+			task.wait(1)
+		end
+	end
+
+	moving = false
+end
+
+-- GUI
+toggle.MouseButton1Click:Connect(function()
+	active = not active
+	if active then
+		toggle.Text = "🟢 Pathfinding ON"
+		toggle.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
+		task.spawn(followPath)
+	else
+		toggle.Text = "🔴 Pathfinding OFF"
+		toggle.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+		humanoid:MoveTo(root.Position)
+	end
+end)
+
+delete.MouseButton1Click:Connect(function()
+	active = false
+	destroyed = true
+	gui:Destroy()
+	script:Destroy()
+end)
+
+task.spawn(followPath)
